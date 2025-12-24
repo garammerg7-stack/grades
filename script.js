@@ -1,57 +1,33 @@
-// Mock Data mimicking Excel files
-const COURSE_DATA = {
-    "arch": {
-        title: "معمارية حاسوب",
-        students: [
-            { id: 1, studentId: "1001", name: "أحمد محمد علي", classwork: 35, final: 45, total: 80 },
-            { id: 2, studentId: "1002", name: "سارة خالد عمر", classwork: 38, final: 50, total: 88 },
-            { id: 3, studentId: "1003", name: "عمر يوسف حسن", classwork: 25, final: 30, total: 55 },
-            { id: 4, studentId: "1004", name: "ليلى محمود يحيى", classwork: 39, final: 55, total: 94 },
-            { id: 5, studentId: "1005", name: "خالد عبدالله سعيد", classwork: 32, final: 40, total: 72 },
-            { id: 6, studentId: "1006", name: "ريم أحمد كمال", classwork: 40, final: 58, total: 98 },
-            { id: 7, studentId: "1007", name: "محمد إبراهيم عادل", classwork: 28, final: 35, total: 63 },
-            { id: 8, studentId: "1008", name: "نور علي حسين", classwork: 36, final: 48, total: 84 },
-            { id: 9, studentId: "1009", name: "ياسر فهد سالم", classwork: 25, final: 30, total: 55 },
-            { id: 10, studentId: "1010", name: "منى سعيد جابر", classwork: 37, final: 52, total: 89 },
-        ]
-    },
-    "fund": {
-        title: "أساسيات حاسوب",
-        students: [
-            { id: 1, studentId: "2001", name: "أحمد محمد علي", classwork: 40, final: 55, total: 95 },
-            { id: 2, studentId: "2002", name: "سارة خالد عمر", classwork: 39, final: 53, total: 92 },
-            { id: 3, studentId: "2003", name: "عمر يوسف حسن", classwork: 30, final: 40, total: 70 },
-            { id: 4, studentId: "2004", name: "ليلى محمود يحيى", classwork: 38, final: 50, total: 88 },
-            { id: 5, studentId: "2005", name: "خالد عبدالله سعيد", classwork: 35, final: 45, total: 80 },
-            { id: 6, studentId: "2006", name: "ريم أحمد كمال", classwork: 39, final: 54, total: 93 },
-            { id: 7, studentId: "2007", name: "محمد إبراهيم عادل", classwork: 32, final: 38, total: 70 },
-        ]
-    },
-    "comm": {
-        title: "مبادئ اتصالات",
-        students: [
-            { id: 1, studentId: "3001", name: "أحمد محمد علي", classwork: 28, final: 32, total: 60 },
-            { id: 2, studentId: "3002", name: "سارة خالد عمر", classwork: 32, final: 40, total: 72 },
-            { id: 3, studentId: "3003", name: "عمر يوسف حسن", classwork: 18, final: 24, total: 42 },
-            { id: 4, studentId: "3004", name: "ليلى محمود يحيى", classwork: 35, final: 48, total: 83 },
-            { id: 5, studentId: "3005", name: "خالد عبدالله سعيد", classwork: 30, final: 35, total: 65 },
-            { id: 6, studentId: "3006", name: "ريم أحمد كمال", classwork: 36, final: 50, total: 86 },
-        ]
-    },
-    "digit": {
-        title: "إلكترونيات رقمية",
-        students: [
-            { id: 1, studentId: "4001", name: "أحمد محمد علي", classwork: 34, final: 46, total: 80 },
-            { id: 2, studentId: "4002", name: "سارة خالد عمر", classwork: 36, final: 48, total: 84 },
-            { id: 3, studentId: "4003", name: "عمر يوسف حسن", classwork: 29, final: 35, total: 64 },
-            { id: 4, studentId: "4004", name: "ليلى محمود يحيى", classwork: 38, final: 52, total: 90 },
-            { id: 5, studentId: "4005", name: "خالد عبدالله سعيد", classwork: 31, final: 39, total: 70 },
-            { id: 6, studentId: "4006", name: "ريم أحمد كمال", classwork: 39, final: 55, total: 94 },
-            { id: 7, studentId: "4007", name: "محمد إبراهيم عادل", classwork: 20, final: 30, total: 50 },
-            { id: 8, studentId: "4008", name: "نور علي حسين", classwork: 33, final: 42, total: 75 },
-        ]
-    }
+// Mock Data mimicking Excel files (Initial load only if Firestore is empty)
+let COURSE_DATA = {
+    "arch": { title: "معمارية حاسوب", students: [] },
+    "fund": { title: "أساسيات حاسوب", students: [] },
+    "comm": { title: "مبادئ اتصالات", students: [] },
+    "digit": { title: "إلكترونيات رقمية", students: [] }
 };
+
+// --- Firebase Configuration ---
+const firebaseConfig = {
+    apiKey: "AIzaSyD3Vf8HMyLn1Crl8sRxGQ3s6jZ1e2PodTo",
+    authDomain: "tgrades.firebaseapp.com",
+    projectId: "tgrades",
+    storageBucket: "tgrades.firebasestorage.app",
+    messagingSenderId: "267127458162",
+    appId: "1:267127458162:web:29340549514095054635eb",
+    measurementId: "G-XX37NZHB7W"
+};
+
+// Initialize Firebase (Compatibility Mode)
+let db;
+function initFirebase() {
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+        console.warn("Firebase not configured. Using LocalStorage fallback.");
+        return false;
+    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    return true;
+}
 
 const STORAGE_KEY = 'teacherPortalData';
 
@@ -76,10 +52,18 @@ const loginCourseSelect = document.getElementById('login-course');
 
 let isAuthenticated = false;
 let userRole = 'teacher';
-let currentStudentId = ''; // Track by ID now
+let currentStudentId = '';
 
-function init() {
-    loadData();
+// Initialize
+async function init() {
+    const isFirebaseActive = initFirebase();
+
+    if (isFirebaseActive) {
+        await fetchFromFirestore();
+    } else {
+        loadDataFromLocalStorage();
+    }
+
     loginForm.addEventListener('submit', handleLogin);
     courseSelect.addEventListener('change', (e) => renderTable(e.target.value));
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
@@ -90,7 +74,39 @@ function init() {
     });
 }
 
-function loadData() {
+async function fetchFromFirestore() {
+    try {
+        const snapshot = await db.collection('grades').get();
+        if (snapshot.empty) {
+            console.log('No cloud data found.');
+            return;
+        }
+        snapshot.forEach(doc => {
+            const courseKey = doc.id;
+            if (COURSE_DATA[courseKey]) {
+                COURSE_DATA[courseKey].students = doc.data().students || [];
+            }
+        });
+        console.log('Cloud data loaded successfully.');
+    } catch (e) {
+        console.error('Error fetching from Firestore:', e);
+    }
+}
+
+async function saveToFirestore(courseKey) {
+    if (!db) return;
+    try {
+        await db.collection('grades').doc(courseKey).set({
+            students: COURSE_DATA[courseKey].students
+        });
+        console.log('Data saved to cloud.');
+    } catch (e) {
+        console.error('Error saving to Firestore:', e);
+        alert('حدث خطأ أثناء الحفظ السحابي');
+    }
+}
+
+function loadDataFromLocalStorage() {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
         try {
@@ -121,8 +137,8 @@ function switchRole(role) {
     if (role === 'student') {
         usernameLabel.textContent = 'رقم الطالب';
         usernameInput.placeholder = 'مثال: 1001';
-        usernameInput.type = 'text'; // Changed to text to allow easy pasting
-        usernameInput.inputMode = 'numeric'; // Show number pad on mobile
+        usernameInput.type = 'text';
+        usernameInput.inputMode = 'numeric';
         passwordGroup.style.display = 'none';
         loginCourseGroup.style.display = 'block';
         passwordInput.removeAttribute('required');
@@ -138,7 +154,7 @@ function switchRole(role) {
     }
 }
 
-function handleFileUpload(e) {
+async function handleFileUpload(e) {
     if (userRole === 'student') return;
 
     const file = e.target.files[0];
@@ -146,7 +162,7 @@ function handleFileUpload(e) {
 
     const reader = new FileReader();
 
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
@@ -161,50 +177,42 @@ function handleFileUpload(e) {
 
         const headers = jsonData[0] || [];
 
-        // Initialize with Defaults (Col 0=ID, 1=Name, 2=CW, 3=Fin, 4=Tot)
         let idxId = 0;
         let idxName = 1;
         let idxClass = 2;
         let idxFinal = 3;
         let idxTotal = 4;
-        let headersFound = false;
 
-        // Fuzzy Header Search
         headers.forEach((h, i) => {
             if (typeof h !== 'string') return;
             const txt = h.trim().toLowerCase();
 
-            if (txt.includes('رقم') || txt.includes('id') || txt.includes('student id')) { idxId = i; headersFound = true; }
-            else if (txt.includes('اسم') || txt.includes('name')) { idxName = i; headersFound = true; }
-            else if (txt.includes('اعمال') || txt.includes('أعمال') || txt.includes('class')) { idxClass = i; headersFound = true; }
-            else if (txt.includes('نهائي') || txt.includes('final')) { idxFinal = i; headersFound = true; }
-            else if (txt.includes('مجموع') || txt.includes('total')) { idxTotal = i; headersFound = true; }
+            if (txt.includes('رقم') || txt.includes('id') || txt.includes('student id')) { idxId = i; }
+            else if (txt.includes('اسم') || txt.includes('name')) { idxName = i; }
+            else if (txt.includes('اعمال') || txt.includes('أعمال') || txt.includes('class')) { idxClass = i; }
+            else if (txt.includes('نهائي') || txt.includes('final')) { idxFinal = i; }
+            else if (txt.includes('مجموع') || txt.includes('total')) { idxTotal = i; }
         });
 
         const newStudents = [];
 
-        // Start from row 1 (skip header)
         for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i];
             if (!row || row.length === 0) continue;
 
-            // Get values using detected indices
             const rawId = row[idxId];
             const rawName = row[idxName];
 
-            if (!rawId) continue; // ID is mandatory
+            if (!rawId) continue;
 
             let classwork = row[idxClass];
             let final = row[idxFinal];
 
-            // Clean numbers
             if (classwork === undefined || classwork === null || classwork === '') classwork = 0;
             if (final === undefined || final === null || final === '') final = 0;
 
             const computedTotal = (parseFloat(classwork) || 0) + (parseFloat(final) || 0);
 
-            // Use Excel total if exists, otherwise computed
-            // Note: If fuzzy search failed and we defaulted, idxTotal is 4. Checks if row[4] exists.
             let total = row[idxTotal];
             if (total === undefined || total === null || total === '') total = computedTotal;
 
@@ -221,11 +229,17 @@ function handleFileUpload(e) {
         if (newStudents.length > 0) {
             const currentCourseKey = courseSelect.value;
             COURSE_DATA[currentCourseKey].students = newStudents;
-            saveToLocalStorage();
+
+            if (db) {
+                await saveToFirestore(currentCourseKey);
+            } else {
+                saveToLocalStorage();
+            }
+
             renderTable(currentCourseKey);
-            alert(`تم رفع الدرجات بنجاح! (${newStudents.length} طالب)\nتم التعرف على الأعمدة تلقائياً.`);
+            alert(`تم رفع الدرجات بنجاح! (${newStudents.length} طالب)`);
         } else {
-            alert('لم يتم العثور على بيانات صالحة. تأكد من وجود صف عناوين (رقم الطالب، الاسم، اعمال السنة...).');
+            alert('لم يتم العثور على بيانات صالحة. تأكد من وجود صف عناوين.');
         }
     };
 
@@ -233,7 +247,7 @@ function handleFileUpload(e) {
     e.target.value = '';
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
     const inputVal = usernameInput.value.trim();
     const password = passwordInput.value.trim();
@@ -247,22 +261,25 @@ function handleLogin(e) {
             showError('اسم المستخدم أو كلمة المرور غير صحيحة');
         }
     } else {
-        // Student Login by ID
         if (inputVal.length < 1) {
             showError('الرجاء إدخال رقم صحيح');
             return;
         }
 
         const selectedCourseKey = loginCourseSelect.value;
-        const selectedCourse = COURSE_DATA[selectedCourseKey];
 
-        // Search by studentId
+        // Refresh from cloud before searching if cloud is active
+        if (db) {
+            await fetchFromFirestore();
+        }
+
+        const selectedCourse = COURSE_DATA[selectedCourseKey];
         const student = selectedCourse.students.find(s => String(s.studentId) === inputVal);
 
         if (student) {
             isAuthenticated = true;
-            currentStudentId = String(student.studentId); // Store ID
-            currentUserSpan.textContent = student.name; // Display Name (not ID)
+            currentStudentId = String(student.studentId);
+            currentUserSpan.textContent = student.name;
             currentUserSpan.nextElementSibling.textContent = 'طالب';
 
             courseSelect.value = selectedCourseKey;
@@ -315,12 +332,11 @@ function renderTable(courseKey) {
 
     let studentsToRender = course.students;
     if (userRole === 'student') {
-        // Filter by ID
         studentsToRender = course.students.filter(s => String(s.studentId) === currentStudentId);
     }
 
     if (studentsToRender.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem;">لا توجد بيانات</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem;">لا توجد بيانات مسجلة</td></tr>';
         return;
     }
 
@@ -335,7 +351,6 @@ function renderTable(courseKey) {
         const cw = student.classwork !== undefined ? student.classwork : '-';
         const fin = student.final !== undefined ? student.final : '-';
 
-        // NOTE: We do NOT display student.studentId here, as requested.
         tr.innerHTML = `
             <td style="font-weight: bold; color: var(--text-primary);">${student.name}</td>
             <td style="color: var(--text-primary);">${cw}</td>
