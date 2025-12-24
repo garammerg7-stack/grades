@@ -217,17 +217,25 @@ function switchRole(role) {
     studentNameSelect.value = '';
 
     if (role === 'student') {
-        usernameGroup.style.display = 'none'; // Hide teacher email input
-        studentNameGroup.style.display = 'block'; // Show student name dropdown
+        usernameGroup.style.display = 'none';
+        usernameInput.removeAttribute('required'); // Prevent validation block
+
+        studentNameGroup.style.display = 'block';
+        studentNameSelect.setAttribute('required', 'true');
+
         loginCourseGroup.style.display = 'block';
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
         loginSubtitle.textContent = 'اختر اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
-        populateStudentNames(); // Trigger initial population
+        populateStudentNames();
     } else {
         usernameGroup.style.display = 'block';
+        usernameInput.setAttribute('required', 'true');
+
         studentNameGroup.style.display = 'none';
+        studentNameSelect.removeAttribute('required');
+
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
         usernameInput.type = 'email';
