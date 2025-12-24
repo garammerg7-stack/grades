@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة المدرس - رصد الدرجات</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Login Section -->
+    <section id="login-section" class="glass">
+        <div class="logo-icon">
+            <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+
+        <div class="login-tabs">
+            <button class="tab-btn active" data-role="teacher">مدرس</button>
+            <button class="tab-btn" data-role="student">طالب</button>
+        </div>
+
+        <h1 id="login-title">مرحباً بعودتك</h1>
+        <p class="subtitle" id="login-subtitle">سجل دخولك كـ مدرس للمتابعة</p>
+
+        <form id="login-form">
+            <!-- Student Course Selection (Hidden by default) -->
+            <div class="input-group" id="login-course-group" style="display: none;">
+                <label for="login-course">اختر المقرر</label>
+                <select id="login-course">
+                    <option value="arch">معمارية حاسوب</option>
+                    <option value="fund">أساسيات حاسوب</option>
+                    <option value="comm">مبادئ اتصالات</option>
+                    <option value="digit">إلكترونيات رقمية</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="username" id="username-label">اسم المستخدم</label>
+                <input type="text" id="username" placeholder="مثال: Ayad" required>
+            </div>
+
+            <div class="input-group" id="password-group">
+                <label for="password">كلمة المرور</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <div id="error-msg" class="error-message"></div>
+
+            <button type="submit" class="btn-primary">
+                تسجيل الدخول <i class="fa-solid fa-arrow-left"></i>
+            </button>
+        </form>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="glass">
+        <header class="dashboard-header">
+            <div class="user-info">
+                <div class="avatar">A</div>
+                <div>
+                    <h2 id="current-user">Ayad</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">مدرس المادة</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <label for="excel-upload" class="upload-btn">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
+                </label>
+                <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;">
+
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fa-solid fa-right-from-bracket"></i> تسجيل خروج
+                </button>
+            </div>
+        </header>
+
+        <div class="course-controls">
+            <div class="course-select-wrapper">
+                <label style="display:block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    <i class="fa-solid fa-book"></i> اختر المقرر الدراسي
+                </label>
+                <select id="course-select">
+                    <option value="arch">معمارية حاسوب</option>
+                    <option value="fund">أساسيات حاسوب</option>
+                    <option value="comm">مبادئ اتصالات</option>
+                    <option value="digit">إلكترونيات رقمية</option>
+                </select>
+            </div>
+            <!-- Statistics or other controls could go here -->
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الطالب</th>
+                        <th>أعمال الفصل (40)</th>
+                        <th>الامتحان النهائي (60)</th>
+                        <th>المجموع (100)</th>
+                    </tr>
+                </thead>
+                <tbody id="grades-body">
+                    <!-- Rows will be injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
