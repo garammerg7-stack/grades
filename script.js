@@ -335,15 +335,18 @@ async function handleFileUpload(e) {
 
 async function handleLogin(e) {
     e.preventDefault();
-    const originalBtnText = loginBtn.innerHTML;
+    console.log('Login attempt started...', userRole);
+
+    const activeBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = activeBtn.innerHTML;
 
     let inputVal;
     if (userRole === 'teacher') {
         inputVal = usernameInput.value.trim();
     } else {
         inputVal = studentNameSelect.value;
-        if (!inputVal) {
-            showError('الرجاء اختيار اسمك من القائمة');
+        if (!inputVal || inputVal === "") {
+            showError('الرجاء اختيار اسمك الثلاثي من القائمة');
             return;
         }
     }
@@ -356,40 +359,45 @@ async function handleLogin(e) {
     }
 
     // Disable button to prevent double clicks
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
+    activeBtn.disabled = true;
+    activeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
 
     try {
         if (userRole === 'teacher') {
             if (!auth) throw new Error('Auth not initialized');
             await auth.signInWithEmailAndPassword(inputVal, password);
         } else {
-            // Student Login Logic
+            // --- Student Login Logic ---
+            console.log('Processing student login for:', inputVal);
+
             const selectedCourseKey = loginCourseSelect.value;
-            if (db) await fetchFromFirestore();
+            if (db) await fetchFromFirestore(); // Ensure we have latest data
             const selectedCourse = COURSE_DATA[selectedCourseKey];
 
             const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
             if (!student) {
-                showError(`عذراً، لم يتم العثور على الطالب في هذا المقرر`);
+                showError(`عذراً، لم يتم العثور على اسمك في سجلات هذا المقرر`);
                 return;
             }
 
             const storedPass = await getStudentPassword(inputVal);
+            console.log('Stored password status:', storedPass ? 'exists' : 'not found');
 
             if (storedPass === null) {
-                // Registering for the first time
+                // First time: Register
+                console.log('Registering new password for student...');
                 await setStudentPassword(inputVal, password);
-                alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح.`);
+                alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح. يمكنك الآن الدخول ومتابعة درجاتك.`);
             } else {
-                // Returning student: Verify password
+                // Returning: Verify
                 if (password !== storedPass) {
                     showError('كلمة المرور غير صحيحة لهذا الاسم');
                     return;
                 }
             }
 
-            // Success Student Login
+            // Success Transition
+            console.log('Login successful, showing dashboard');
             isAuthenticated = true;
             currentStudentName = inputVal;
             currentUserSpan.textContent = student.name;
@@ -398,17 +406,19 @@ async function handleLogin(e) {
             showDashboard();
         }
     } catch (error) {
-        console.error('Login Error:', error);
-        let msg = 'حدث خطأ أثناء تسجيل الدخول';
+        console.error('Login Error details:', error);
+        let msg = 'حدث خطأ أثناء الاتصال بالقاعدة';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-            msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-        } else if (error.code === 'permission-denied') {
-            msg = 'خطأ في الصلاحيات: يرجى التأكد من إعدادات قواعد البيانات (Rules) في Firebase';
+            msg = 'البييد الإلكتروني أو كلمة المرور غير صحيحة';
+        } else if (error.code === 'permission-denied' || error.message.includes('permission-denied')) {
+            msg = 'خطأ في الأذونات: يرجى التأكد من أنك قمت بتعديل القواعد (Rules) في Firebase كما ذكرنا سابقاً';
+        } else if (error.message) {
+            msg = `خطأ: ${error.message}`;
         }
         showError(msg);
     } finally {
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = originalBtnText;
+        activeBtn.disabled = false;
+        activeBtn.innerHTML = originalBtnText;
     }
 }
 
