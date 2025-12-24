@@ -218,11 +218,7 @@ function switchRole(role) {
 
     if (role === 'student') {
         usernameGroup.style.display = 'none';
-        usernameInput.removeAttribute('required'); // Prevent validation block
-
         studentNameGroup.style.display = 'block';
-        studentNameSelect.setAttribute('required', 'true');
-
         loginCourseGroup.style.display = 'block';
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
@@ -231,11 +227,7 @@ function switchRole(role) {
         populateStudentNames();
     } else {
         usernameGroup.style.display = 'block';
-        usernameInput.setAttribute('required', 'true');
-
         studentNameGroup.style.display = 'none';
-        studentNameSelect.removeAttribute('required');
-
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
         usernameInput.type = 'email';
@@ -345,12 +337,13 @@ async function handleLogin(e) {
     e.preventDefault();
     console.log('Login attempt started...', userRole);
 
-    const activeBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = activeBtn.innerHTML;
-
     let inputVal;
     if (userRole === 'teacher') {
         inputVal = usernameInput.value.trim();
+        if (!inputVal) {
+            showError('الرجاء إدخال البريد الإلكتروني');
+            return;
+        }
     } else {
         inputVal = studentNameSelect.value;
         if (!inputVal || inputVal === "") {
@@ -360,26 +353,28 @@ async function handleLogin(e) {
     }
 
     const password = passwordInput.value.trim();
+    if (!password) {
+        showError('الرجاء إدخال كلمة المرور');
+        return;
+    }
 
     if (password.length < 4) {
         showError('كلمة المرور يجب أن تكون 4 خانات على الأقل');
         return;
     }
 
-    // Disable button to prevent double clicks
-    activeBtn.disabled = true;
-    activeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
+    const originalBtnText = loginBtn.innerHTML;
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
 
     try {
         if (userRole === 'teacher') {
-            if (!auth) throw new Error('Auth not initialized');
+            if (!auth) throw new Error('يرجى تهيئة Firebase أولاً');
             await auth.signInWithEmailAndPassword(inputVal, password);
         } else {
-            // --- Student Login Logic ---
-            console.log('Processing student login for:', inputVal);
-
+            console.log('Student logic executing...');
             const selectedCourseKey = loginCourseSelect.value;
-            if (db) await fetchFromFirestore(); // Ensure we have latest data
+            if (db) await fetchFromFirestore();
             const selectedCourse = COURSE_DATA[selectedCourseKey];
 
             const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
@@ -389,23 +384,18 @@ async function handleLogin(e) {
             }
 
             const storedPass = await getStudentPassword(inputVal);
-            console.log('Stored password status:', storedPass ? 'exists' : 'not found');
-
             if (storedPass === null) {
-                // First time: Register
-                console.log('Registering new password for student...');
+                // Register
                 await setStudentPassword(inputVal, password);
-                alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح. يمكنك الآن الدخول ومتابعة درجاتك.`);
+                alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح. يمكنك الآن الدخول.`);
             } else {
-                // Returning: Verify
+                // Login
                 if (password !== storedPass) {
                     showError('كلمة المرور غير صحيحة لهذا الاسم');
                     return;
                 }
             }
 
-            // Success Transition
-            console.log('Login successful, showing dashboard');
             isAuthenticated = true;
             currentStudentName = inputVal;
             currentUserSpan.textContent = student.name;
@@ -414,19 +404,17 @@ async function handleLogin(e) {
             showDashboard();
         }
     } catch (error) {
-        console.error('Login Error details:', error);
-        let msg = 'حدث خطأ أثناء الاتصال بالقاعدة';
+        console.error('Error in login:', error);
+        let msg = 'تعذر تسجيل الدخول، يرجى المحاولة لاحقاً';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-            msg = 'البييد الإلكتروني أو كلمة المرور غير صحيحة';
-        } else if (error.code === 'permission-denied' || error.message.includes('permission-denied')) {
-            msg = 'خطأ في الأذونات: يرجى التأكد من أنك قمت بتعديل القواعد (Rules) في Firebase كما ذكرنا سابقاً';
-        } else if (error.message) {
-            msg = `خطأ: ${error.message}`;
+            msg = 'البيانات غير صحيحة';
+        } else if (error.code === 'permission-denied' || error.message.includes('permission')) {
+            msg = 'خطأ في الصلاحيات. تأكد من إعدادات Firestore Rules';
         }
         showError(msg);
     } finally {
-        activeBtn.disabled = false;
-        activeBtn.innerHTML = originalBtnText;
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = originalBtnText;
     }
 }
 
