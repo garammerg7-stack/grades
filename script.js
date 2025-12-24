@@ -37,8 +37,12 @@ const STORAGE_KEY = 'teacherPortalData';
 const loginSection = document.getElementById('login-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const loginForm = document.getElementById('login-form');
+const usernameGroup = document.getElementById('username-group'); // Container for email input
 const usernameInput = document.getElementById('username');
+const studentNameGroup = document.getElementById('student-name-group');
+const studentNameSelect = document.getElementById('student-name');
 const passwordInput = document.getElementById('password');
+const loginBtn = loginForm.querySelector('button[type="submit"]');
 const errorMsg = document.getElementById('error-msg');
 const courseSelect = document.getElementById('course-select');
 const tableBody = document.getElementById('grades-body');
@@ -47,11 +51,11 @@ const uploadContainer = document.getElementById('teacher-actions');
 const tabBtns = document.querySelectorAll('.tab-btn');
 const usernameLabel = document.getElementById('username-label');
 const passwordGroup = document.getElementById('password-group');
+const passwordLabel = document.getElementById('password-label');
 const loginTitle = document.getElementById('login-title');
 const loginSubtitle = document.getElementById('login-subtitle');
 const loginCourseGroup = document.getElementById('login-course-group');
 const loginCourseSelect = document.getElementById('login-course');
-const passwordLabel = document.getElementById('password-label');
 
 let isAuthenticated = false;
 let userRole = 'teacher';
@@ -82,6 +86,13 @@ async function init() {
 
     loginForm.addEventListener('submit', handleLogin);
     courseSelect.addEventListener('change', (e) => renderTable(e.target.value));
+
+    // Update student names when course changes in login screen
+    loginCourseSelect.addEventListener('change', populateStudentNames);
+
+    // Check if student has password when name selected
+    studentNameSelect.addEventListener('change', checkStudentStatus);
+
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     document.getElementById('excel-upload').addEventListener('change', handleFileUpload);
 
@@ -165,6 +176,37 @@ function saveToLocalStorage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(COURSE_DATA));
 }
 
+async function populateStudentNames() {
+    const courseKey = loginCourseSelect.value;
+    const course = COURSE_DATA[courseKey];
+    if (!course) return;
+
+    // Reset select
+    studentNameSelect.innerHTML = '<option value="">-- اختر اسمك من القائمة --</option>';
+
+    course.students.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.name.trim();
+        opt.textContent = s.name.trim();
+        studentNameSelect.appendChild(opt);
+    });
+
+    // Reset button
+    loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> دخول';
+}
+
+async function checkStudentStatus() {
+    const name = studentNameSelect.value;
+    if (!name) return;
+
+    const storedPass = await getStudentPassword(name);
+    if (storedPass === null) {
+        loginBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> تسجيل (لأول مرة)';
+    } else {
+        loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> دخول';
+    }
+}
+
 function switchRole(role) {
     userRole = role;
     tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.role === role));
@@ -172,18 +214,20 @@ function switchRole(role) {
     errorMsg.style.display = 'none';
     usernameInput.value = '';
     passwordInput.value = '';
+    studentNameSelect.value = '';
 
     if (role === 'student') {
-        usernameLabel.textContent = 'الاسم الكامل';
-        usernameInput.placeholder = 'أدخل اسمك كما في السجل';
-        usernameInput.type = 'text';
-        usernameInput.removeAttribute('inputmode');
+        usernameGroup.style.display = 'none'; // Hide teacher email input
+        studentNameGroup.style.display = 'block'; // Show student name dropdown
         loginCourseGroup.style.display = 'block';
-        passwordGroup.style.display = 'block'; // Make visible for students
+        passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
-        loginSubtitle.textContent = 'أدخل اسمك الكامل وكلمة السر للاطلاع على النتيجة';
+        loginSubtitle.textContent = 'اختر اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
+        populateStudentNames(); // Trigger initial population
     } else {
+        usernameGroup.style.display = 'block';
+        studentNameGroup.style.display = 'none';
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
         usernameInput.type = 'email';
@@ -192,6 +236,7 @@ function switchRole(role) {
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = '••••••••';
         loginSubtitle.textContent = 'سجل دخولك كـ مدرس للمتابعة';
+        loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول';
     }
 }
 
@@ -290,10 +335,19 @@ async function handleFileUpload(e) {
 
 async function handleLogin(e) {
     e.preventDefault();
-    const loginBtn = e.target.querySelector('button[type="submit"]');
     const originalBtnText = loginBtn.innerHTML;
 
-    const inputVal = usernameInput.value.trim();
+    let inputVal;
+    if (userRole === 'teacher') {
+        inputVal = usernameInput.value.trim();
+    } else {
+        inputVal = studentNameSelect.value;
+        if (!inputVal) {
+            showError('الرجاء اختيار اسمك من القائمة');
+            return;
+        }
+    }
+
     const password = passwordInput.value.trim();
 
     if (password.length < 4) {
@@ -310,26 +364,21 @@ async function handleLogin(e) {
             if (!auth) throw new Error('Auth not initialized');
             await auth.signInWithEmailAndPassword(inputVal, password);
         } else {
-            if (inputVal.length < 3) {
-                showError('الرجاء إدخال الاسم الكامل بشكل صحيح');
-                return;
-            }
-
+            // Student Login Logic
             const selectedCourseKey = loginCourseSelect.value;
             if (db) await fetchFromFirestore();
             const selectedCourse = COURSE_DATA[selectedCourseKey];
 
             const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
             if (!student) {
-                showError(`عذراً، لم يتم العثور على طالب باسم "${inputVal}" في مقرر ${selectedCourse.title}`);
+                showError(`عذراً، لم يتم العثور على الطالب في هذا المقرر`);
                 return;
             }
 
-            // Simplified One-Step Student Password Logic
             const storedPass = await getStudentPassword(inputVal);
 
             if (storedPass === null) {
-                // First-time student: Save their entered password automatically
+                // Registering for the first time
                 await setStudentPassword(inputVal, password);
                 alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح.`);
             } else {
