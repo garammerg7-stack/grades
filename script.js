@@ -350,7 +350,6 @@ async function handleFileUpload(e) {
         }
 
         const headers = jsonData[0] || [];
-        const headers = jsonData[0] || [];
         const courseKey = courseSelect.value;
         const course = COURSE_DATA[courseKey];
 
