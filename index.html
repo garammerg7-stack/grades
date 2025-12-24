@@ -28,7 +28,7 @@
             <button class="tab-btn" data-role="student">طالب</button>
         </div>
 
-        <h1 id="login-title">مرحباً بعودتك</h1>
+        <h1 id="login-title">مرحبًا بكم<br>نظام الاستعلام عن درجات الطالب</h1>
         <p class="subtitle" id="login-subtitle">سجل دخولك كـ مدرس للمتابعة</p>
 
         <form id="login-form">
@@ -81,6 +81,10 @@
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <div id="teacher-actions" style="display: flex; gap: 10px;">
+                    <button id="reset-bulk-btn" class="upload-btn"
+                        style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <i class="fa-solid fa-user-lock"></i> تصفير كافة كلمات السر
+                    </button>
                     <label for="excel-upload" class="upload-btn">
                         <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
                     </label>
@@ -116,6 +120,7 @@
                         <th>أعمال الفصل (40)</th>
                         <th>الامتحان النهائي (60)</th>
                         <th>المجموع (100)</th>
+                        <th id="th-controls" style="display: none;">تحكم</th>
                     </tr>
                 </thead>
                 <tbody id="grades-body">

@@ -57,6 +57,8 @@ const loginTitle = document.getElementById('login-title');
 const loginSubtitle = document.getElementById('login-subtitle');
 const loginCourseGroup = document.getElementById('login-course-group');
 const loginCourseSelect = document.getElementById('login-course');
+const resetBulkBtn = document.getElementById('reset-bulk-btn');
+const thControls = document.getElementById('th-controls');
 
 let isAuthenticated = false;
 let userRole = 'teacher';
@@ -101,6 +103,7 @@ async function init() {
 
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     document.getElementById('excel-upload').addEventListener('change', handleFileUpload);
+    resetBulkBtn.addEventListener('click', resetAllCoursePasswords);
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => switchRole(btn.dataset.role));
@@ -159,6 +162,34 @@ async function resetStudentPassword(studentName) {
     if (confirm(`هل أنت متأكد من تصفير كلمة سر الطالب: ${studentName}؟`)) {
         await db.collection('student_passwords').doc(studentName).delete();
         alert('تم تصفير كلمة السر بنجاح. يمكن للطالب الآن تعيين كلمة سر جديدة عند الدخول.');
+    }
+}
+
+async function resetAllCoursePasswords() {
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+    if (!course || !course.students.length) return;
+
+    if (confirm(`⚠️ تحذير: هل أنت متأكد من تصفير كلمات السر لجميع طلاب مقرر (${course.title})؟\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+        resetBulkBtn.disabled = true;
+        const originalText = resetBulkBtn.innerHTML;
+        resetBulkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التصفير...';
+
+        try {
+            const batch = db.batch();
+            course.students.forEach(student => {
+                const ref = db.collection('student_passwords').doc(student.name.trim());
+                batch.delete(ref);
+            });
+            await batch.commit();
+            alert(`تم تصفير كلمات السر بنجاح لجميع طلاب مقرر (${course.title}).`);
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء التصفير الجماعي.');
+        } finally {
+            resetBulkBtn.disabled = false;
+            resetBulkBtn.innerHTML = originalText;
+        }
     }
 }
 
@@ -457,8 +488,10 @@ function showDashboard() {
 
     if (userRole === 'student') {
         uploadContainer.style.display = 'none';
+        thControls.style.display = 'none';
     } else {
         uploadContainer.style.display = 'flex';
+        thControls.style.display = 'table-cell';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
     }
 
@@ -515,21 +548,24 @@ function renderTable(courseKey) {
         const cw = student.classwork !== undefined ? student.classwork : '-';
         const fin = student.final !== undefined ? student.final : '-';
 
-        // Add Reset Password button for Teacher
-        const nameCellContent = userRole === 'teacher'
-            ? `<div style="display:flex; align-items:center; gap:8px;">
-                <span title="تصفير كلمة سر الطالب" onclick="resetStudentPassword('${student.name.trim()}')" style="cursor:pointer; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.6;"><i class="fa-solid fa-lock-open"></i></span>
-                ${student.name}
-               </div>`
-            : student.name;
+        let controlCell = '';
+        if (userRole === 'teacher') {
+            controlCell = `
+                <td style="text-align:center;">
+                    <button onclick="resetStudentPassword('${student.name.trim()}')" class="btn-reset-small" title="تصفير كلمة سر الطالب">
+                        <i class="fa-solid fa-unlock-keyhole"></i>
+                    </button>
+                </td>`;
+        }
 
         tr.innerHTML = `
-            <td style="font-weight: bold; color: var(--text-primary);">${nameCellContent}</td>
+            <td style="font-weight: bold; color: var(--text-primary);">${student.name}</td>
             <td style="color: var(--text-primary);">${cw}</td>
             <td style="color: var(--text-primary);">${fin}</td>
             <td>
                 <span class="grade-badge ${gradeClass}">${student.total}</span>
             </td>
+            ${controlCell}
         `;
         tableBody.appendChild(tr);
     });

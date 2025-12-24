@@ -347,6 +347,35 @@ tbody tr:hover {
     opacity: 0.9;
 }
 
+.btn-reset-small {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-reset-small:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+#reset-bulk-btn {
+    transition: all 0.3s ease;
+}
+
+#reset-bulk-btn:hover {
+    background: rgba(239, 68, 68, 0.3) !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+
 /* Animations */
 @keyframes fadeIn {
     from {
