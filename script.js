@@ -40,7 +40,8 @@ const loginForm = document.getElementById('login-form');
 const usernameGroup = document.getElementById('username-group'); // Container for email input
 const usernameInput = document.getElementById('username');
 const studentNameGroup = document.getElementById('student-name-group');
-const studentNameSelect = document.getElementById('student-name');
+const studentNameInput = document.getElementById('student-name');
+const studentNamesDatalist = document.getElementById('student-names-list');
 const passwordInput = document.getElementById('password');
 const loginBtn = loginForm.querySelector('button[type="submit"]');
 const errorMsg = document.getElementById('error-msg');
@@ -90,8 +91,9 @@ async function init() {
     // Update student names when course changes in login screen
     loginCourseSelect.addEventListener('change', populateStudentNames);
 
-    // Check if student has password when name selected
-    studentNameSelect.addEventListener('change', checkStudentStatus);
+    // Check status when name changes or matches a suggestion
+    studentNameInput.addEventListener('input', checkStudentStatus);
+    studentNameInput.addEventListener('change', checkStudentStatus);
 
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     document.getElementById('excel-upload').addEventListener('change', handleFileUpload);
@@ -181,23 +183,31 @@ async function populateStudentNames() {
     const course = COURSE_DATA[courseKey];
     if (!course) return;
 
-    // Reset select
-    studentNameSelect.innerHTML = '<option value="">-- اختر اسمك من القائمة --</option>';
+    // Reset datalist
+    studentNamesDatalist.innerHTML = '';
 
     course.students.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.name.trim();
-        opt.textContent = s.name.trim();
-        studentNameSelect.appendChild(opt);
+        studentNamesDatalist.appendChild(opt);
     });
 
-    // Reset button
+    // Reset input and button
+    studentNameInput.value = '';
     loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> دخول';
 }
 
 async function checkStudentStatus() {
-    const name = studentNameSelect.value;
-    if (!name) return;
+    const name = studentNameInput.value.trim();
+    if (!name || name.length < 3) return;
+
+    // Only check if it's a valid student in the list
+    const courseKey = loginCourseSelect.value;
+    const course = COURSE_DATA[courseKey];
+    if (!course) return;
+
+    const studentExists = course.students.some(s => s.name.trim() === name);
+    if (!studentExists) return;
 
     const storedPass = await getStudentPassword(name);
     if (storedPass === null) {
@@ -214,7 +224,7 @@ function switchRole(role) {
     errorMsg.style.display = 'none';
     usernameInput.value = '';
     passwordInput.value = '';
-    studentNameSelect.value = '';
+    studentNameInput.value = '';
 
     if (role === 'student') {
         usernameGroup.style.display = 'none';
@@ -345,9 +355,9 @@ async function handleLogin(e) {
             return;
         }
     } else {
-        inputVal = studentNameSelect.value;
+        inputVal = studentNameInput.value.trim();
         if (!inputVal || inputVal === "") {
-            showError('الرجاء اختيار اسمك الثلاثي من القائمة');
+            showError('الرجاء كتابة اسمك الثلاثي');
             return;
         }
     }
