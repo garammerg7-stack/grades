@@ -108,7 +108,11 @@ async function init() {
     studentNameInput.addEventListener('change', checkStudentStatus);
 
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
-    document.getElementById('excel-upload').addEventListener('change', handleFileUpload);
+
+    // Separate Listeners
+    document.getElementById('grades-upload').addEventListener('change', (e) => processExcelFile(e, 'grades'));
+    document.getElementById('attendance-upload').addEventListener('change', (e) => processExcelFile(e, 'attendance'));
+
     resetBulkBtn.addEventListener('click', resetAllCoursePasswords);
 
     viewBtns.forEach(btn => {
@@ -328,7 +332,7 @@ function switchView(view) {
     }
 }
 
-async function handleFileUpload(e) {
+async function processExcelFile(e, type) {
     if (userRole === 'student') return;
 
     const file = e.target.files[0];
@@ -353,11 +357,16 @@ async function handleFileUpload(e) {
         const courseKey = courseSelect.value;
         const course = COURSE_DATA[courseKey];
 
-        // Detection: Attendance files have ~15 columns (Name + 14 weeks)
-        // Grades files have specific keywords like "أعمال" or "نهائي"
-        const isAttendance = headers.length >= 10 && !headers.some(h => String(h).includes('أعمال') || String(h).includes('نهائي'));
+        // Strict Detection Logic
+        const isAttendanceContent = headers.length >= 10 && !headers.some(h => String(h).includes('أعمال') || String(h).includes('نهائي'));
 
-        if (isAttendance) {
+        if (type === 'attendance') {
+            if (!isAttendanceContent) {
+                alert('خطأ: يبدو أنك تحاول رفع ملف "درجات" في خانة "الحضور". يرجى اختيار الملف الصحيح.');
+                return;
+            }
+
+            // Process Attendance
             const attendanceData = [];
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
@@ -368,19 +377,26 @@ async function handleFileUpload(e) {
                 for (let week = 1; week <= 14; week++) {
                     let val = row[week];
                     if (val === undefined || val === null || String(val).trim() === "") {
-                        sessionFlags.push("N"); // Undefined in data
+                        sessionFlags.push("N"); // Undefined
                     } else {
                         sessionFlags.push(String(val).trim());
                     }
                 }
-
                 attendanceData.push({ name, sessions: sessionFlags });
             }
             course.attendance = attendanceData;
-            alert(`تم رفع حضور الطلاب بنجاح لمقرر (${course.title})`);
-        } else {
-            // Grades Logic
-            let idxId = 0, idxName = 1, idxClass = 2, idxFinal = 3, idxTotal = 4;
+            alert(`تم رفع كشف الحضور بنجاح لمقرر (${course.title})`);
+
+        } else if (type === 'grades') {
+            if (isAttendanceContent) {
+                alert('خطأ: يبدو أنك تحاول رفع ملف "حضور" في خانة "الدرجات". يرجى اختيار الملف الصحيح.');
+                return;
+            }
+
+            // Process Grades
+            let idxId = 0, idxName = 0, idxClass = 0, idxFinal = 0, idxTotal = 0; // Default 0 to avoid crashes, will be set below
+
+            // Try to find indices dynamically
             headers.forEach((h, i) => {
                 const txt = String(h).trim().toLowerCase();
                 if (txt.includes('id')) idxId = i;
@@ -390,24 +406,31 @@ async function handleFileUpload(e) {
                 else if (txt.includes('مجموع') || txt.includes('total')) idxTotal = i;
             });
 
+            // Fallback if index 0 is not name (rare but safe)
+            if (idxName === 0 && !String(headers[0]).includes('اسم')) idxName = 1;
+
             const students = [];
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if (!row || !row[idxName]) continue;
+
+                const cw = row[idxClass] || 0;
+                const fn = row[idxFinal] || 0;
+
                 students.push({
                     id: row[idxId] || '',
                     name: String(row[idxName]).trim(),
-                    classwork: row[idxClass] || 0,
-                    final: row[idxFinal] || 0,
-                    total: row[idxTotal] || (Number(row[idxClass] || 0) + Number(row[idxFinal] || 0))
+                    classwork: cw,
+                    final: fn,
+                    total: row[idxTotal] || (Number(cw) + Number(fn))
                 });
             }
-            // Check if valid data found
+
             if (students.length > 0) {
                 course.students = students;
                 alert(`تم تحديث درجات مقرر (${course.title}) بنجاح`);
             } else {
-                alert('لم يتم العثور على بيانات صالحة. تأكد من وجود صف عناوين (اسم الطالب، أعمال الفصل...).');
+                alert('لم يتم العثور على بيانات درجات صالحة.');
                 return;
             }
         }

@@ -86,10 +86,16 @@
                         style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
                         <i class="fa-solid fa-user-lock"></i> تصفير كافة كلمات السر
                     </button>
-                    <label for="excel-upload" class="upload-btn">
+                    <label for="attendance-upload" class="upload-btn"
+                        style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <i class="fa-solid fa-calendar-days"></i> رفع ملف حضور
+                    </label>
+                    <input type="file" id="attendance-upload" accept=".xlsx, .xls" style="display: none;">
+
+                    <label for="grades-upload" class="upload-btn">
                         <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
                     </label>
-                    <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;">
+                    <input type="file" id="grades-upload" accept=".xlsx, .xls" style="display: none;">
                 </div>
 
                 <button id="logout-btn" class="logout-btn">
