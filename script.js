@@ -366,29 +366,49 @@ async function processExcelFile(e, type) {
                 return;
             }
 
-            // Smart Detection for Week 1 Column
-            // We search for the first column index (after name) that contains valid flags ('1', '0', 'm')
-            let startWeekIndex = 1;
-            let maxMatchCount = 0;
+            // Smart Detection Strategy
+            // 1. Try to find a header that looks like "1", "Week 1", "الأسبوع 1", etc.
+            let startWeekIndex = -1;
 
-            // Check columns 1 to 20 to find where data likely starts
-            for (let c = 1; c < 20; c++) {
-                let matchCount = 0;
-                // Sample first 10 rows
-                for (let r = 1; r < Math.min(jsonData.length, 15); r++) {
-                    const row = jsonData[r];
-                    if (!row) continue;
-                    const val = String(row[c]).trim();
-                    if (['1', '0', 'm'].includes(val)) matchCount++;
-                }
-
-                // If this column looks like attendance data (more than 2 matches in sample), pick it
-                if (matchCount > 2) {
-                    startWeekIndex = c;
-                    break;
+            for (let c = 1; c < headers.length; c++) {
+                const h = String(headers[c]).trim();
+                // Check for "1" alone, or "Week 1", "W1", "أسبوع 1"
+                // Regex: matches "1" at start or entries containing "1" and "week"/"Week"/"أسبوع"
+                if (h === '1' || /^(week|w|أسبوع).*\s*1$/i.test(h) || h.includes('1')) {
+                    // Double check: subsequent header should probably be '2'
+                    const nextH = String(headers[c + 1] || '').trim();
+                    if (nextH.includes('2')) {
+                        startWeekIndex = c;
+                        console.log("Header-based detection found start:", c);
+                        break;
+                    }
                 }
             }
-            console.log("Detected Attendance Start Column:", startWeekIndex);
+
+            // 2. Fallback: Check data columns (1 to 20) if header detection failed
+            if (startWeekIndex === -1) {
+                for (let c = 1; c < 20; c++) {
+                    let matchCount = 0;
+                    // Deep Scan: Check up to 50 rows
+                    for (let r = 1; r < Math.min(jsonData.length, 50); r++) {
+                        const row = jsonData[r];
+                        if (!row) continue;
+                        const val = String(row[c]).trim();
+                        if (['1', '0', 'm'].includes(val)) matchCount++;
+                    }
+                    // Lower threshold based on deeper scan
+                    if (matchCount > 0) {
+                        startWeekIndex = c;
+                        console.log("Data-based detection found start:", c);
+                        break;
+                    }
+                }
+            }
+
+            // Default to 1 if completely lost
+            if (startWeekIndex === -1) startWeekIndex = 1;
+
+            // alert(`debug: Data starts at column ${startWeekIndex}`);
 
             // Process Attendance
             const attendanceData = [];
