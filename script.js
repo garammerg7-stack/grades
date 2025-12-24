@@ -88,6 +88,9 @@ async function init() {
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => switchRole(btn.dataset.role));
     });
+
+    // Sync UI with initial role
+    switchRole(userRole);
 }
 
 async function fetchFromFirestore() {
