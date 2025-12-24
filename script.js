@@ -174,7 +174,7 @@ function switchRole(role) {
     passwordInput.value = '';
 
     if (role === 'student') {
-        usernameLabel.textContent = 'الاسم الثلاثي';
+        usernameLabel.textContent = 'الاسم الكامل';
         usernameInput.placeholder = 'أدخل اسمك كما في السجل';
         usernameInput.type = 'text';
         usernameInput.removeAttribute('inputmode');
@@ -182,7 +182,7 @@ function switchRole(role) {
         passwordGroup.style.display = 'block'; // Make visible for students
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
-        loginSubtitle.textContent = 'أدخل اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
+        loginSubtitle.textContent = 'أدخل اسمك الكامل وكلمة السر للاطلاع على النتيجة';
     } else {
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
@@ -311,7 +311,7 @@ async function handleLogin(e) {
             await auth.signInWithEmailAndPassword(inputVal, password);
         } else {
             if (inputVal.length < 3) {
-                showError('الرجاء إدخال الاسم الثلاثي بشكل صحيح');
+                showError('الرجاء إدخال الاسم الكامل بشكل صحيح');
                 return;
             }
 
