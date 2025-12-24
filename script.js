@@ -19,6 +19,7 @@ const firebaseConfig = {
 
 // Initialize Firebase (Compatibility Mode)
 let db;
+let auth;
 function initFirebase() {
     if (firebaseConfig.apiKey === "YOUR_API_KEY") {
         console.warn("Firebase not configured. Using LocalStorage fallback.");
@@ -26,6 +27,7 @@ function initFirebase() {
     }
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    auth = firebase.auth();
     return true;
 }
 
@@ -59,7 +61,20 @@ async function init() {
     const isFirebaseActive = initFirebase();
 
     if (isFirebaseActive) {
+        // Essential: First fetch data once, but also listen for auth state
         await fetchFromFirestore();
+
+        auth.onAuthStateChanged(user => {
+            if (user && userRole === 'teacher') {
+                // Persistent logged-in state for teacher
+                isAuthenticated = true;
+                currentUserSpan.textContent = user.email.split('@')[0];
+                showDashboard();
+            } else if (!user && isAuthenticated && userRole === 'teacher') {
+                // If user logs out or session expires while on dashboard
+                handleLogout();
+            }
+        });
     } else {
         loadDataFromLocalStorage();
     }
@@ -144,9 +159,9 @@ function switchRole(role) {
         passwordInput.removeAttribute('required');
         loginSubtitle.textContent = 'أختر المقرر وأدخل رقمك (ID) للاطلاع على النتيجة';
     } else {
-        usernameLabel.textContent = 'اسم المستخدم';
-        usernameInput.placeholder = 'مثال: Ayad';
-        usernameInput.type = 'text';
+        usernameLabel.textContent = 'البريد الإلكتروني';
+        usernameInput.placeholder = 'example@mail.com';
+        usernameInput.type = 'email';
         passwordGroup.style.display = 'block';
         loginCourseGroup.style.display = 'none';
         passwordInput.setAttribute('required', 'true');
@@ -253,16 +268,21 @@ async function handleLogin(e) {
     const password = passwordInput.value.trim();
 
     if (userRole === 'teacher') {
-        if (inputVal === 'Ayad' && password === 'Snagra6@') {
-            isAuthenticated = true;
-            currentUserSpan.textContent = inputVal;
-            showDashboard();
-        } else {
-            showError('اسم المستخدم أو كلمة المرور غير صحيحة');
+        if (!auth) {
+            showError('النظام غير مهيأ حالياً، يرجى المحاولة لاحقاً');
+            return;
+        }
+
+        try {
+            await auth.signInWithEmailAndPassword(inputVal, password);
+            // isAuthenticated is handled by onAuthStateChanged
+        } catch (error) {
+            console.error('Login Error:', error);
+            showError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
         }
     } else {
         if (inputVal.length < 1) {
-            showError('الرجاء إدخال رقم صحيح');
+            showError('الرجاء إدخل رقم صحيح');
             return;
         }
 
