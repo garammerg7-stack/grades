@@ -91,8 +91,12 @@ async function init() {
     // Update student names when course changes in login screen
     loginCourseSelect.addEventListener('change', populateStudentNames);
 
-    // Check status when name changes or matches a suggestion
-    studentNameInput.addEventListener('input', checkStudentStatus);
+    // Privacy-focused predictive search: Only show names AFTER 3 characters
+    studentNameInput.addEventListener('input', () => {
+        filterStudentNames();
+        checkStudentStatus();
+    });
+
     studentNameInput.addEventListener('change', checkStudentStatus);
 
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
@@ -179,22 +183,37 @@ function saveToLocalStorage() {
 }
 
 async function populateStudentNames() {
+    // We strictly keep it empty now to prevent showing all names on focus
+    studentNamesDatalist.innerHTML = '';
+    studentNameInput.value = '';
+    loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> دخول';
+}
+
+function filterStudentNames() {
+    const query = studentNameInput.value.trim();
     const courseKey = loginCourseSelect.value;
     const course = COURSE_DATA[courseKey];
+
+    // Clear list if query is too short
+    if (query.length < 3) {
+        studentNamesDatalist.innerHTML = '';
+        return;
+    }
+
     if (!course) return;
 
-    // Reset datalist
-    studentNamesDatalist.innerHTML = '';
+    // Filter names that contain the query
+    const matches = course.students.filter(s =>
+        s.name.trim().includes(query)
+    );
 
-    course.students.forEach(s => {
+    // Update datalist with ONLY matched names
+    studentNamesDatalist.innerHTML = '';
+    matches.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.name.trim();
         studentNamesDatalist.appendChild(opt);
     });
-
-    // Reset input and button
-    studentNameInput.value = '';
-    loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> دخول';
 }
 
 async function checkStudentStatus() {
