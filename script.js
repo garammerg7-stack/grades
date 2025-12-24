@@ -51,15 +51,11 @@ const loginTitle = document.getElementById('login-title');
 const loginSubtitle = document.getElementById('login-subtitle');
 const loginCourseGroup = document.getElementById('login-course-group');
 const loginCourseSelect = document.getElementById('login-course');
-
-const studentPasswordGroup = document.getElementById('student-password-group');
-const studentPasswordInput = document.getElementById('student-password');
-const studentPasswordLabel = document.getElementById('student-password-label');
+const passwordLabel = document.getElementById('password-label');
 
 let isAuthenticated = false;
 let userRole = 'teacher';
 let currentStudentName = ''; // Changed from currentStudentId to Name
-let isSettingPassword = false; // Track if student is in password-setting mode
 
 // Initialize
 async function init() {
@@ -173,26 +169,25 @@ function switchRole(role) {
     errorMsg.style.display = 'none';
     usernameInput.value = '';
     passwordInput.value = '';
-    studentPasswordInput.value = '';
-    studentPasswordGroup.style.display = 'none';
-    isSettingPassword = false;
 
     if (role === 'student') {
         usernameLabel.textContent = 'الاسم الثلاثي';
         usernameInput.placeholder = 'أدخل اسمك كما في السجل';
         usernameInput.type = 'text';
-        usernameInput.removeAttribute('inputmode'); // Remove numeric
-        passwordGroup.style.display = 'none';
+        usernameInput.removeAttribute('inputmode');
         loginCourseGroup.style.display = 'block';
-        passwordInput.removeAttribute('required');
-        loginSubtitle.textContent = 'أدخل اسمك الثلاثي للاطلاع على النتيجة';
+        passwordGroup.style.display = 'block'; // Make visible for students
+        passwordLabel.textContent = 'كلمة المرور';
+        passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
+        loginSubtitle.textContent = 'أدخل اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
     } else {
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
         usernameInput.type = 'email';
-        passwordGroup.style.display = 'block';
         loginCourseGroup.style.display = 'none';
-        passwordInput.setAttribute('required', 'true');
+        passwordGroup.style.display = 'block';
+        passwordLabel.textContent = 'كلمة المرور';
+        passwordInput.placeholder = '••••••••';
         loginSubtitle.textContent = 'سجل دخولك كـ مدرس للمتابعة';
     }
 }
@@ -297,7 +292,11 @@ async function handleLogin(e) {
 
     const inputVal = usernameInput.value.trim();
     const password = passwordInput.value.trim();
-    const studentPass = studentPasswordInput.value.trim();
+
+    if (password.length < 4) {
+        showError('كلمة المرور يجب أن تكون 4 خانات على الأقل');
+        return;
+    }
 
     // Disable button to prevent double clicks
     loginBtn.disabled = true;
@@ -323,43 +322,17 @@ async function handleLogin(e) {
                 return;
             }
 
-            // Student Password Logic
-            const currentPass = await getStudentPassword(inputVal);
+            // Simplified One-Step Student Password Logic
+            const storedPass = await getStudentPassword(inputVal);
 
-            if (currentPass === null) {
-                if (studentPasswordGroup.style.display === 'none' || !isSettingPassword) {
-                    studentPasswordGroup.style.display = 'block';
-                    studentPasswordLabel.textContent = 'تعيين كلمة سر جديدة (لأول مرة)';
-                    studentPasswordInput.placeholder = 'اختر كلمة سر قوية';
-                    studentPasswordInput.setAttribute('required', 'true');
-                    showError(`أهلاً بك يا ${inputVal.split(' ')[0]}! يرجى تعيين كلمة سر لتأمين حسابك.`);
-                    errorMsg.style.background = 'rgba(16, 185, 129, 0.1)';
-                    errorMsg.style.color = 'var(--success)';
-                    isSettingPassword = true;
-                    return;
-                }
-
-                if (studentPass.length < 4) {
-                    showError('كلمة السر يجب أن تكون 4 خانات على الأقل');
-                    return;
-                }
-
-                await setStudentPassword(inputVal, studentPass);
-                alert('تم تعيين كلمة السر بنجاح! يمكنك الآن الدخول.');
-                isSettingPassword = false;
+            if (storedPass === null) {
+                // First-time student: Save their entered password automatically
+                await setStudentPassword(inputVal, password);
+                alert(`أهلاً بك يا ${inputVal.split(' ')[0]}! تم حفظ كلمة سرك بنجاح.`);
             } else {
-                if (studentPasswordGroup.style.display === 'none' || isSettingPassword) {
-                    studentPasswordGroup.style.display = 'block';
-                    studentPasswordLabel.textContent = 'أدخل كلمة المرور الخاصة بك';
-                    studentPasswordInput.placeholder = '••••••••';
-                    studentPasswordInput.setAttribute('required', 'true');
-                    errorMsg.style.display = 'none';
-                    isSettingPassword = false;
-                    return;
-                }
-
-                if (studentPass !== currentPass) {
-                    showError('كلمة المرور غير صحيحة');
+                // Returning student: Verify password
+                if (password !== storedPass) {
+                    showError('كلمة المرور غير صحيحة لهذا الاسم');
                     return;
                 }
             }
@@ -370,7 +343,6 @@ async function handleLogin(e) {
             currentUserSpan.textContent = student.name;
             currentUserSpan.nextElementSibling.textContent = 'طالب';
             courseSelect.value = selectedCourseKey;
-            studentPasswordGroup.style.display = 'none';
             showDashboard();
         }
     } catch (error) {
@@ -394,7 +366,6 @@ function showDashboard() {
     dashboardSection.style.display = 'flex';
     usernameInput.value = '';
     passwordInput.value = '';
-    studentPasswordInput.value = '';
     errorMsg.style.display = 'none';
 
     if (userRole === 'student') {
