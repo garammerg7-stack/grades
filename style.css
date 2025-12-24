@@ -226,6 +226,79 @@ option {
     min-width: 250px;
 }
 
+/* View Switcher */
+.view-switcher {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.view-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.view-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.view-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Attendance Table */
+.attendance-table th,
+.attendance-table td {
+    text-align: center;
+    min-width: 45px;
+    font-size: 0.85rem;
+}
+
+.attendance-table td:first-child,
+.attendance-table th:first-child {
+    text-align: right;
+    min-width: 200px;
+    position: sticky;
+    right: 0;
+    background: rgba(15, 23, 42, 0.95);
+    z-index: 5;
+}
+
+.att-icon {
+    font-size: 1rem;
+}
+
+.att-present {
+    color: var(--success);
+}
+
+.att-absent {
+    color: var(--error);
+}
+
+.att-excused {
+    color: #fbbf24;
+}
+
+.att-undefined {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
 /* Table Styles */
 .table-container {
     overflow-y: auto;

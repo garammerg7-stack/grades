@@ -98,6 +98,15 @@
             </div>
         </header>
 
+        <div class="view-switcher">
+            <button class="view-btn active" data-view="grades">
+                <i class="fa-solid fa-graduation-cap"></i> الدرجات
+            </button>
+            <button class="view-btn" data-view="attendance">
+                <i class="fa-solid fa-calendar-check"></i> الحضور والغياب
+            </button>
+        </div>
+
         <div class="course-controls">
             <div class="course-select-wrapper">
                 <label style="display:block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
@@ -113,7 +122,7 @@
             <!-- Statistics or other controls could go here -->
         </div>
 
-        <div class="table-container">
+        <div class="table-container" id="grades-container">
             <table>
                 <thead>
                     <tr>
@@ -125,6 +134,17 @@
                     </tr>
                 </thead>
                 <tbody id="grades-body">
+                    <!-- Rows will be injected by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-container" id="attendance-container" style="display: none;">
+            <table class="attendance-table">
+                <thead id="attendance-head">
+                    <!-- Dynamic Headers (Sessions 1-14) -->
+                </thead>
+                <tbody id="attendance-body">
                     <!-- Rows will be injected by JS -->
                 </tbody>
             </table>

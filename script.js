@@ -1,9 +1,9 @@
 // Mock Data mimicking Excel files (Initial load only if Firestore is empty)
 let COURSE_DATA = {
-    "arch": { title: "معمارية حاسوب", students: [] },
-    "fund": { title: "أساسيات حاسوب", students: [] },
-    "comm": { title: "مبادئ اتصالات", students: [] },
-    "digit": { title: "إلكترونيات رقمية", students: [] }
+    "arch": { title: "معمارية حاسوب", students: [], attendance: [] },
+    "fund": { title: "أساسيات حاسوب", students: [], attendance: [] },
+    "comm": { title: "مبادئ اتصالات", students: [], attendance: [] },
+    "digit": { title: "إلكترونيات رقمية", students: [], attendance: [] }
 };
 
 // --- Firebase Configuration ---
@@ -59,8 +59,14 @@ const loginCourseGroup = document.getElementById('login-course-group');
 const loginCourseSelect = document.getElementById('login-course');
 const resetBulkBtn = document.getElementById('reset-bulk-btn');
 const thControls = document.getElementById('th-controls');
+const viewBtns = document.querySelectorAll('.view-btn');
+const gradesContainer = document.getElementById('grades-container');
+const attendanceContainer = document.getElementById('attendance-container');
+const attendanceHead = document.getElementById('attendance-head');
+const attendanceBody = document.getElementById('attendance-body');
 
 let isAuthenticated = false;
+let currentView = 'grades'; // 'grades' or 'attendance'
 let userRole = 'teacher';
 let currentStudentName = ''; // Changed from currentStudentId to Name
 
@@ -105,6 +111,10 @@ async function init() {
     document.getElementById('excel-upload').addEventListener('change', handleFileUpload);
     resetBulkBtn.addEventListener('click', resetAllCoursePasswords);
 
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => switchRole(btn.dataset.role));
     });
@@ -123,7 +133,9 @@ async function fetchFromFirestore() {
         snapshot.forEach(doc => {
             const courseKey = doc.id;
             if (COURSE_DATA[courseKey]) {
-                COURSE_DATA[courseKey].students = doc.data().students || [];
+                const data = doc.data();
+                COURSE_DATA[courseKey].students = data.students || [];
+                COURSE_DATA[courseKey].attendance = data.attendance || [];
             }
         });
         console.log('Cloud data loaded successfully.');
@@ -136,7 +148,8 @@ async function saveToFirestore(courseKey) {
     if (!db) return;
     try {
         await db.collection('grades').doc(courseKey).set({
-            students: COURSE_DATA[courseKey].students
+            students: COURSE_DATA[courseKey].students,
+            attendance: COURSE_DATA[courseKey].attendance || []
         });
         console.log('Data saved to cloud.');
     } catch (e) {
@@ -300,6 +313,21 @@ function switchRole(role) {
     }
 }
 
+function switchView(view) {
+    currentView = view;
+    viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+
+    if (view === 'grades') {
+        gradesContainer.style.display = 'block';
+        attendanceContainer.style.display = 'none';
+        renderTable(courseSelect.value);
+    } else {
+        gradesContainer.style.display = 'none';
+        attendanceContainer.style.display = 'block';
+        renderAttendanceTable(courseSelect.value);
+    }
+}
+
 async function handleFileUpload(e) {
     if (userRole === 'student') return;
 
@@ -322,76 +350,80 @@ async function handleFileUpload(e) {
         }
 
         const headers = jsonData[0] || [];
+        const headers = jsonData[0] || [];
+        const courseKey = courseSelect.value;
+        const course = COURSE_DATA[courseKey];
 
-        let idxId = 0;
-        let idxName = 1;
-        let idxClass = 2;
-        let idxFinal = 3;
-        let idxTotal = 4;
+        // Detection: Attendance files have ~15 columns (Name + 14 weeks)
+        // Grades files have specific keywords like "أعمال" or "نهائي"
+        const isAttendance = headers.length >= 10 && !headers.some(h => String(h).includes('أعمال') || String(h).includes('نهائي'));
 
-        headers.forEach((h, i) => {
-            if (typeof h !== 'string') return;
-            const txt = h.trim().toLowerCase();
+        if (isAttendance) {
+            const attendanceData = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || !row[0]) continue;
 
-            if (txt.includes('رقم') || txt.includes('id') || txt.includes('student id')) { idxId = i; }
-            else if (txt.includes('اسم') || txt.includes('name')) { idxName = i; }
-            else if (txt.includes('اعمال') || txt.includes('أعمال') || txt.includes('class')) { idxClass = i; }
-            else if (txt.includes('نهائي') || txt.includes('final')) { idxFinal = i; }
-            else if (txt.includes('مجموع') || txt.includes('total')) { idxTotal = i; }
-        });
+                const name = String(row[0]).trim();
+                const sessionFlags = [];
+                for (let week = 1; week <= 14; week++) {
+                    let val = row[week];
+                    if (val === undefined || val === null || String(val).trim() === "") {
+                        sessionFlags.push("N"); // Undefined in data
+                    } else {
+                        sessionFlags.push(String(val).trim());
+                    }
+                }
 
-        const newStudents = [];
-
-        for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row || row.length === 0) continue;
-
-            const rawId = row[idxId];
-            const rawName = row[idxName];
-
-            if (!rawId) continue;
-
-            let classwork = row[idxClass];
-            let final = row[idxFinal];
-
-            if (classwork === undefined || classwork === null || classwork === '') classwork = 0;
-            if (final === undefined || final === null || final === '') final = 0;
-
-            const computedTotal = (parseFloat(classwork) || 0) + (parseFloat(final) || 0);
-
-            let total = row[idxTotal];
-            if (total === undefined || total === null || total === '') total = computedTotal;
-
-            newStudents.push({
-                id: i,
-                studentId: String(rawId).trim(),
-                name: rawName ? String(rawName).trim() : "غير معروف",
-                classwork: classwork,
-                final: final,
-                total: total
-            });
-        }
-
-        if (newStudents.length > 0) {
-            const currentCourseKey = courseSelect.value;
-            COURSE_DATA[currentCourseKey].students = newStudents;
-
-            if (db) {
-                await saveToFirestore(currentCourseKey);
-            } else {
-                saveToLocalStorage();
+                attendanceData.push({ name, sessions: sessionFlags });
             }
-
-            renderTable(currentCourseKey);
-            alert(`تم رفع الدرجات بنجاح! (${newStudents.length} طالب)`);
+            course.attendance = attendanceData;
+            alert(`تم رفع حضور الطلاب بنجاح لمقرر (${course.title})`);
         } else {
-            alert('لم يتم العثور على بيانات صالحة. تأكد من وجود صف عناوين.');
+            // Grades Logic
+            let idxId = 0, idxName = 1, idxClass = 2, idxFinal = 3, idxTotal = 4;
+            headers.forEach((h, i) => {
+                const txt = String(h).trim().toLowerCase();
+                if (txt.includes('id')) idxId = i;
+                else if (txt.includes('اسم') || txt.includes('name')) idxName = i;
+                else if (txt.includes('اعمال') || txt.includes('أعمال')) idxClass = i;
+                else if (txt.includes('نهائي') || txt.includes('final')) idxFinal = i;
+                else if (txt.includes('مجموع') || txt.includes('total')) idxTotal = i;
+            });
+
+            const students = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || !row[idxName]) continue;
+                students.push({
+                    id: row[idxId] || '',
+                    name: String(row[idxName]).trim(),
+                    classwork: row[idxClass] || 0,
+                    final: row[idxFinal] || 0,
+                    total: row[idxTotal] || (Number(row[idxClass] || 0) + Number(row[idxFinal] || 0))
+                });
+            }
+            // Check if valid data found
+            if (students.length > 0) {
+                course.students = students;
+                alert(`تم تحديث درجات مقرر (${course.title}) بنجاح`);
+            } else {
+                alert('لم يتم العثور على بيانات صالحة. تأكد من وجود صف عناوين (اسم الطالب، أعمال الفصل...).');
+                return;
+            }
         }
+
+        if (db) await saveToFirestore(courseKey);
+        else saveDataToLocalStorage();
+
+        if (currentView === 'grades') renderTable(courseKey);
+        else renderAttendanceTable(courseKey);
     };
 
     reader.readAsArrayBuffer(file);
     e.target.value = '';
 }
+
 
 async function handleLogin(e) {
     e.preventDefault();
@@ -495,7 +527,8 @@ function showDashboard() {
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
     }
 
-    renderTable(courseSelect.value);
+    if (currentView === 'grades') renderTable(courseSelect.value);
+    else renderAttendanceTable(courseSelect.value);
 }
 
 async function handleLogout() {
@@ -568,6 +601,55 @@ function renderTable(courseKey) {
             ${controlCell}
         `;
         tableBody.appendChild(tr);
+    });
+}
+
+function renderAttendanceTable(courseKey) {
+    const course = COURSE_DATA[courseKey];
+    if (!course) return;
+
+    // Build Header
+    let headHtml = '<tr><th style="min-width: 200px;">اسم الطالب</th>';
+    for (let i = 1; i <= 14; i++) {
+        headHtml += `<th>أسبوع ${i}</th>`;
+    }
+    headHtml += '</tr>';
+    attendanceHead.innerHTML = headHtml;
+
+    // Build Body
+    attendanceBody.innerHTML = '';
+    let studentsToRender = course.attendance || [];
+
+    if (userRole === 'student') {
+        studentsToRender = studentsToRender.filter(s => s.name.trim() === currentStudentName);
+    }
+
+    if (studentsToRender.length === 0) {
+        attendanceBody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding: 2rem;">لا توجد بيانات حضور مسجلة</td></tr>`;
+        return;
+    }
+
+    studentsToRender.forEach(row => {
+        const tr = document.createElement('tr');
+        let cells = `<td style="font-weight: bold; color: var(--text-primary); text-align: right;">${row.name}</td>`;
+
+        row.sessions.forEach(s => {
+            let content = '';
+            if (s === '1') content = '<span class="att-icon att-present" title="حاضر">✔️</span>';
+            else if (s === '0') content = '<span class="att-icon att-absent" title="غائب بدون عذر">❌</span>';
+            else if (s === 'م') content = '<span class="att-icon att-excused" title="غائب معذور">م</span>';
+            else content = '<span class="att-icon att-undefined" title="غير معرف">N</span>';
+
+            cells += `<td>${content}</td>`;
+        });
+
+        // Fill empty cells if less than 14
+        for (let i = row.sessions.length; i < 14; i++) {
+            cells += `<td><span class="att-icon att-undefined">N</span></td>`;
+        }
+
+        tr.innerHTML = cells;
+        attendanceBody.appendChild(tr);
     });
 }
 
