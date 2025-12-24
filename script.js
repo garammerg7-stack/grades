@@ -366,6 +366,30 @@ async function processExcelFile(e, type) {
                 return;
             }
 
+            // Smart Detection for Week 1 Column
+            // We search for the first column index (after name) that contains valid flags ('1', '0', 'm')
+            let startWeekIndex = 1;
+            let maxMatchCount = 0;
+
+            // Check columns 1 to 20 to find where data likely starts
+            for (let c = 1; c < 20; c++) {
+                let matchCount = 0;
+                // Sample first 10 rows
+                for (let r = 1; r < Math.min(jsonData.length, 15); r++) {
+                    const row = jsonData[r];
+                    if (!row) continue;
+                    const val = String(row[c]).trim();
+                    if (['1', '0', 'm'].includes(val)) matchCount++;
+                }
+
+                // If this column looks like attendance data (more than 2 matches in sample), pick it
+                if (matchCount > 2) {
+                    startWeekIndex = c;
+                    break;
+                }
+            }
+            console.log("Detected Attendance Start Column:", startWeekIndex);
+
             // Process Attendance
             const attendanceData = [];
             for (let i = 1; i < jsonData.length; i++) {
@@ -374,8 +398,11 @@ async function processExcelFile(e, type) {
 
                 const name = String(row[0]).trim();
                 const sessionFlags = [];
-                for (let week = 1; week <= 14; week++) {
-                    let val = row[week];
+                for (let k = 0; k < 14; k++) {
+                    // Map visual week (k) to excel column (startWeekIndex + k)
+                    let colIdx = startWeekIndex + k;
+                    let val = row[colIdx];
+
                     if (val === undefined || val === null || String(val).trim() === "") {
                         sessionFlags.push("N"); // Undefined
                     } else {
