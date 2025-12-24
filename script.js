@@ -292,96 +292,99 @@ async function handleFileUpload(e) {
 
 async function handleLogin(e) {
     e.preventDefault();
+    const loginBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = loginBtn.innerHTML;
+
     const inputVal = usernameInput.value.trim();
     const password = passwordInput.value.trim();
     const studentPass = studentPasswordInput.value.trim();
 
-    if (userRole === 'teacher') {
-        if (!auth) {
-            showError('النظام غير مهيأ حالياً، يرجى المحاولة لاحقاً');
-            return;
-        }
+    // Disable button to prevent double clicks
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
 
-        try {
+    try {
+        if (userRole === 'teacher') {
+            if (!auth) throw new Error('Auth not initialized');
             await auth.signInWithEmailAndPassword(inputVal, password);
-            // isAuthenticated is handled by onAuthStateChanged
-        } catch (error) {
-            console.error('Login Error:', error);
-            showError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-        }
-    } else {
-        if (inputVal.length < 3) {
-            showError('الرجاء إدخال الاسم الثلاثي بشكل صحيح');
-            return;
-        }
-
-        const selectedCourseKey = loginCourseSelect.value;
-        if (db) await fetchFromFirestore();
-        const selectedCourse = COURSE_DATA[selectedCourseKey];
-
-        // Search by Name instead of ID
-        const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
-
-        if (!student) {
-            showError(`عذراً، لم يتم العثور على طالب باسم "${inputVal}" في مقرر ${selectedCourse.title}`);
-            return;
-        }
-
-        // Logic for Student Password (Using Name as key)
-        const currentPass = await getStudentPassword(inputVal);
-
-        if (currentPass === null) {
-            // First time login - Ask to set password
-            if (studentPasswordGroup.style.display === 'none' || !isSettingPassword) {
-                studentPasswordGroup.style.display = 'block';
-                studentPasswordLabel.textContent = 'تعيين كلمة سر جديدة (لأول مرة)';
-                studentPasswordInput.placeholder = 'اختر كلمة سر قوية';
-                studentPasswordInput.setAttribute('required', 'true');
-                showError(`أهلاً بك يا ${inputVal.split(' ')[0]}! يرجى تعيين كلمة سر.`);
-                errorMsg.style.background = 'rgba(16, 185, 129, 0.1)';
-                errorMsg.style.color = 'var(--success)';
-                isSettingPassword = true;
-                return;
-            }
-
-            if (studentPass.length < 4) {
-                showError('كلمة السر يجب أن تكون 4 خانات على الأقل');
-                return;
-            }
-
-            await setStudentPassword(inputVal, studentPass);
-            alert('تم تعيين كلمة السر بنجاح! يمكنك الآن الدخول.');
-            studentPasswordGroup.style.display = 'none';
-            studentPasswordInput.value = '';
-            // Continue login or re-prompt? Let's refresh UI
-            isSettingPassword = false;
         } else {
-            // Returning student - Ask for password
-            if (studentPasswordGroup.style.display === 'none' || isSettingPassword) {
-                studentPasswordGroup.style.display = 'block';
-                studentPasswordLabel.textContent = 'أدخل كلمة المرور الخاصة بك';
-                studentPasswordInput.placeholder = '••••••••';
-                studentPasswordInput.setAttribute('required', 'true');
-                errorMsg.style.display = 'none';
-                isSettingPassword = false; // Ensure we're not in setting mode
+            if (inputVal.length < 3) {
+                showError('الرجاء إدخال الاسم الثلاثي بشكل صحيح');
                 return;
             }
 
-            if (studentPass !== currentPass) {
-                showError('كلمة المرور غير صحيحة');
+            const selectedCourseKey = loginCourseSelect.value;
+            if (db) await fetchFromFirestore();
+            const selectedCourse = COURSE_DATA[selectedCourseKey];
+
+            const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
+            if (!student) {
+                showError(`عذراً، لم يتم العثور على طالب باسم "${inputVal}" في مقرر ${selectedCourse.title}`);
                 return;
             }
+
+            // Student Password Logic
+            const currentPass = await getStudentPassword(inputVal);
+
+            if (currentPass === null) {
+                if (studentPasswordGroup.style.display === 'none' || !isSettingPassword) {
+                    studentPasswordGroup.style.display = 'block';
+                    studentPasswordLabel.textContent = 'تعيين كلمة سر جديدة (لأول مرة)';
+                    studentPasswordInput.placeholder = 'اختر كلمة سر قوية';
+                    studentPasswordInput.setAttribute('required', 'true');
+                    showError(`أهلاً بك يا ${inputVal.split(' ')[0]}! يرجى تعيين كلمة سر لتأمين حسابك.`);
+                    errorMsg.style.background = 'rgba(16, 185, 129, 0.1)';
+                    errorMsg.style.color = 'var(--success)';
+                    isSettingPassword = true;
+                    return;
+                }
+
+                if (studentPass.length < 4) {
+                    showError('كلمة السر يجب أن تكون 4 خانات على الأقل');
+                    return;
+                }
+
+                await setStudentPassword(inputVal, studentPass);
+                alert('تم تعيين كلمة السر بنجاح! يمكنك الآن الدخول.');
+                isSettingPassword = false;
+            } else {
+                if (studentPasswordGroup.style.display === 'none' || isSettingPassword) {
+                    studentPasswordGroup.style.display = 'block';
+                    studentPasswordLabel.textContent = 'أدخل كلمة المرور الخاصة بك';
+                    studentPasswordInput.placeholder = '••••••••';
+                    studentPasswordInput.setAttribute('required', 'true');
+                    errorMsg.style.display = 'none';
+                    isSettingPassword = false;
+                    return;
+                }
+
+                if (studentPass !== currentPass) {
+                    showError('كلمة المرور غير صحيحة');
+                    return;
+                }
+            }
+
+            // Success Student Login
+            isAuthenticated = true;
+            currentStudentName = inputVal;
+            currentUserSpan.textContent = student.name;
+            currentUserSpan.nextElementSibling.textContent = 'طالب';
+            courseSelect.value = selectedCourseKey;
+            studentPasswordGroup.style.display = 'none';
+            showDashboard();
         }
-
-        // Success Student Login
-        isAuthenticated = true;
-        currentStudentName = inputVal;
-        currentUserSpan.textContent = student.name;
-        currentUserSpan.nextElementSibling.textContent = 'طالب';
-
-        courseSelect.value = selectedCourseKey;
-        studentPasswordGroup.style.display = 'none';
-        showDashboard();
+    } catch (error) {
+        console.error('Login Error:', error);
+        let msg = 'حدث خطأ أثناء تسجيل الدخول';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        } else if (error.code === 'permission-denied') {
+            msg = 'خطأ في الصلاحيات: يرجى التأكد من إعدادات قواعد البيانات (Rules) في Firebase';
+        }
+        showError(msg);
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = originalBtnText;
     }
 }
 
