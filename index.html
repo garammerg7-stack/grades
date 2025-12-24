@@ -44,13 +44,19 @@
             </div>
 
             <div class="input-group">
-                <label for="username" id="username-label">اسم المستخدم</label>
-                <input type="text" id="username" placeholder="مثال: Ayad" required>
+                <label for="username" id="username-label">الاسم الثلاثي</label>
+                <input type="text" id="username" placeholder="أدخل اسمك كما هو في السجل" required>
             </div>
 
             <div class="input-group" id="password-group">
-                <label for="password">كلمة المرور</label>
+                <label for="password" id="password-label">كلمة المرور</label>
                 <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <!-- Student Password Field (shown dynamically) -->
+            <div class="input-group" id="student-password-group" style="display: none;">
+                <label for="student-password" id="student-password-label">كلمة مرور الطالب</label>
+                <input type="password" id="student-password" placeholder="••••••••">
             </div>
 
             <div id="error-msg" class="error-message"></div>
