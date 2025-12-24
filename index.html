@@ -70,11 +70,13 @@
                     <span style="font-size: 0.8rem; color: var(--text-secondary);">مدرس المادة</span>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <label for="excel-upload" class="upload-btn">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
-                </label>
-                <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div id="teacher-actions" style="display: flex; gap: 10px;">
+                    <label for="excel-upload" class="upload-btn">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
+                    </label>
+                    <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;">
+                </div>
 
                 <button id="logout-btn" class="logout-btn">
                     <i class="fa-solid fa-right-from-bracket"></i> تسجيل خروج

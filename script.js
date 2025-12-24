@@ -41,7 +41,7 @@ const errorMsg = document.getElementById('error-msg');
 const courseSelect = document.getElementById('course-select');
 const tableBody = document.getElementById('grades-body');
 const currentUserSpan = document.getElementById('current-user');
-const uploadContainer = document.querySelector('.upload-btn').parentElement;
+const uploadContainer = document.getElementById('teacher-actions');
 const tabBtns = document.querySelectorAll('.tab-btn');
 const usernameLabel = document.getElementById('username-label');
 const passwordGroup = document.getElementById('password-group');
@@ -290,6 +290,7 @@ async function handleLogin(e) {
     }
 }
 
+
 function showDashboard() {
     loginSection.style.display = 'none';
     dashboardSection.style.display = 'flex';
@@ -298,9 +299,9 @@ function showDashboard() {
     errorMsg.style.display = 'none';
 
     if (userRole === 'student') {
-        if (uploadContainer) uploadContainer.style.display = 'none';
+        uploadContainer.style.display = 'none';
     } else {
-        if (uploadContainer) uploadContainer.style.display = 'flex';
+        uploadContainer.style.display = 'flex';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
     }
 
