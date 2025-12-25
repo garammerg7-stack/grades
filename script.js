@@ -195,9 +195,10 @@ async function resetAllCoursePasswords() {
     if (!course || !course.students.length) return;
 
     if (confirm(`⚠️ تحذير: هل أنت متأكد من تصفير كلمات السر لجميع طلاب مقرر (${course.title})؟\nهذا الإجراء لا يمكن التراجع عنه.`)) {
-        resetBulkBtn.disabled = true;
-        const originalText = resetBulkBtn.innerHTML;
-        resetBulkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التصفير...';
+        const resetBulkBtn = document.getElementById('reset-bulk-btn');
+        if (resetBulkBtn) resetBulkBtn.disabled = true;
+        const originalText = resetBulkBtn ? resetBulkBtn.innerHTML : '';
+        if (resetBulkBtn) resetBulkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التصفير...';
 
         try {
             const batch = db.batch();
@@ -211,8 +212,10 @@ async function resetAllCoursePasswords() {
             console.error(e);
             alert('حدث خطأ أثناء التصفير الجماعي.');
         } finally {
-            resetBulkBtn.disabled = false;
-            resetBulkBtn.innerHTML = originalText;
+            if (resetBulkBtn) {
+                resetBulkBtn.disabled = false;
+                resetBulkBtn.innerHTML = originalText;
+            }
         }
     }
 }
@@ -405,9 +408,6 @@ function renderActionBar(tabId) {
         bar.innerHTML = `
             <button id="manage-courses-btn" class="upload-btn" onclick="openCourseModal()" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
                 <i class="fa-solid fa-layer-group"></i> إدارة المقررات
-            </button>
-            <button id="reset-bulk-btn" class="upload-btn" onclick="resetAllCoursePasswords()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                <i class="fa-solid fa-user-lock"></i> تصفير كلمات الست
             </button>
         `;
     }
