@@ -123,11 +123,6 @@ async function init() {
 
     // Course Management
     // 'add-course-btn' and 'close-course-modal' are static in Modal, safe to attach here.
-    const addCourseBtn = document.getElementById('add-course-btn');
-    if (addCourseBtn) addCourseBtn.addEventListener('click', addNewCourse);
-
-    const closeCourseBtn = document.getElementById('close-course-modal');
-    if (closeCourseBtn) closeCourseBtn.addEventListener('click', () => document.getElementById('course-modal').style.display = 'none');
 
     // Sync UI with initial role
     switchRole(userRole);
@@ -863,26 +858,6 @@ function populateCourseDropdown() {
     }
 }
 
-function openCourseModal() {
-    const modal = document.getElementById('course-modal');
-    // Re-render list on open
-    const list = document.getElementById('course-list');
-    list.innerHTML = '';
-
-    for (const [key, data] of Object.entries(COURSE_DATA)) {
-        const item = document.createElement('div');
-        item.className = 'course-item';
-        item.innerHTML = `
-            <span style="color: var(--text-primary); ${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
-            <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
-                ${data.hidden ? '👁️‍🗨️' : '👁️'}
-            </button>
-        `;
-        list.appendChild(item);
-    }
-
-    modal.style.display = 'flex';
-}
 
 
 function renderSettingsView() {
