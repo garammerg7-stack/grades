@@ -300,6 +300,10 @@ function switchRole(role) {
     passwordInput.value = '';
     studentNameInput.value = '';
 
+    // Security: Hide Settings for Students
+    const settingsBtn = document.getElementById('nav-settings-btn');
+    const roleBadge = document.getElementById('user-role-badge');
+
     if (role === 'student') {
         usernameGroup.style.display = 'none';
         studentNameGroup.style.display = 'block';
@@ -308,6 +312,10 @@ function switchRole(role) {
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
         loginSubtitle.textContent = 'اختر اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
+
+        if (settingsBtn) settingsBtn.style.display = 'none';
+        if (roleBadge) { roleBadge.textContent = 'Student'; roleBadge.className = 'badge-student'; }
+
         populateStudentNames();
     } else {
         usernameGroup.style.display = 'block';
@@ -319,15 +327,6 @@ function switchRole(role) {
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = '••••••••';
-        const tabBtn = document.querySelector(`.tab-btn[data-role="${role}"]`);
-
-        // Update Role Badges
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if (tabBtn) tabBtn.classList.add('active');
-
-        // Security: Hide Settings for Students
-        const settingsBtn = document.getElementById('nav-settings-btn');
-        const roleBadge = document.getElementById('user-role-badge');
 
         if (role === 'teacher') {
             loginForm.style.display = 'block';
@@ -340,20 +339,6 @@ function switchRole(role) {
 
             if (settingsBtn) settingsBtn.style.display = 'flex';
             if (roleBadge) { roleBadge.textContent = 'Admin'; roleBadge.className = 'badge-admin'; }
-
-        } else {
-            loginForm.style.display = 'block';
-            usernameInput.parentElement.style.display = 'none';
-            studentNameInput.parentElement.style.display = 'block';
-
-            loginCourseSelect.parentElement.style.display = 'block';
-            populateCourseDropdown(); // Ensure student sees only public courses
-
-            loginTitle.innerHTML = 'بوابة الطالب<br>الاستعلام عن النتائج';
-            loginSubtitle.textContent = 'اختر المقرر واسمك للدخول';
-
-            if (settingsBtn) settingsBtn.style.display = 'none';
-            if (roleBadge) { roleBadge.textContent = 'Student'; roleBadge.className = 'badge-student'; }
         }
     }
 }
