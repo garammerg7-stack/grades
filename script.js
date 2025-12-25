@@ -352,24 +352,32 @@ function switchTab(tabId) {
         else btn.classList.remove('active');
     });
 
-    // Hide all containers first
-    document.getElementById('grades-container').style.display = 'none';
-    document.getElementById('attendance-container').style.display = 'none';
-    document.getElementById('settings-container').style.display = 'none';
+    // Robustly hide all views/modals first
+    const views = ['grades-container', 'attendance-container', 'settings-container'];
+    views.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 
-    // Show active
+    // Also ensuring modal is closed when switching tabs
+    const modal = document.getElementById('course-modal');
+    if (modal) modal.style.display = 'none';
+
+    // Show active view
     if (tabId === 'grades') {
-        document.getElementById('grades-container').style.display = 'block';
+        const el = document.getElementById('grades-container');
+        if (el) el.style.display = 'block';
         currentView = 'grades';
         renderTable(courseSelect.value);
     } else if (tabId === 'attendance') {
-        document.getElementById('attendance-container').style.display = 'block';
+        const el = document.getElementById('attendance-container');
+        if (el) el.style.display = 'block';
         currentView = 'attendance';
         renderAttendanceTable(courseSelect.value);
     } else if (tabId === 'settings') {
-        document.getElementById('grades-container').style.display = 'none'; // Hide grades
-        document.getElementById('settings-container').style.display = 'flex'; // Show settings
-        renderSettingsView(); // Populate list
+        const el = document.getElementById('settings-container');
+        if (el) el.style.display = 'flex';
+        renderSettingsView();
     }
 
     renderActionBar(tabId);
