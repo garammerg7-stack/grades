@@ -125,6 +125,7 @@ async function init() {
 
     // Sync UI with initial role
     switchRole(userRole);
+    switchTab('grades'); // Force initial tab load
 }
 
 async function fetchFromFirestore() {
