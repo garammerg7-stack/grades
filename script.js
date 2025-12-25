@@ -402,18 +402,12 @@ function renderActionBar(tabId) {
             <label for="grades-upload" class="upload-btn">
                 <i class="fa-solid fa-cloud-arrow-up"></i> رفع درجات
             </label>
-            <button class="upload-btn" onclick="printReport('grades')">
-                <i class="fa-solid fa-print"></i> طباعة
-            </button>
         `;
     } else if (tabId === 'attendance') {
         bar.innerHTML = `
             <label for="attendance-upload" class="upload-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
                 <i class="fa-solid fa-calendar-days"></i> رفع حضور
             </label>
-            <button class="upload-btn" onclick="printReport('attendance')">
-                <i class="fa-solid fa-print"></i> طباعة
-            </button>
         `;
     } else if (tabId === 'settings') {
         bar.innerHTML = `
@@ -422,9 +416,6 @@ function renderActionBar(tabId) {
             </button>
             <button id="reset-bulk-btn" class="upload-btn" onclick="resetAllCoursePasswords()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
                 <i class="fa-solid fa-user-lock"></i> تصفير كلمات الست
-            </button>
-            <button class="upload-btn" onclick="printReport('combined')">
-                <i class="fa-solid fa-file-pdf"></i> تقرير شامل
             </button>
         `;
     }
@@ -935,42 +926,6 @@ function addNewCourse() {
 }
 
 // --- Printing System ---
-function printReport(type) {
-    const originalView = currentView;
-    const gContainer = document.getElementById('grades-container');
-    const aContainer = document.getElementById('attendance-container');
-
-    document.body.classList.add('printing-mode');
-
-    // Force show relevant containers
-    if (type === 'grades') {
-        gContainer.style.display = 'block';
-        aContainer.style.display = 'none';
-        renderTable(courseSelect.value);
-    } else if (type === 'attendance') {
-        gContainer.style.display = 'none';
-        aContainer.style.display = 'block';
-        renderAttendanceTable(courseSelect.value);
-    } else if (type === 'combined') {
-        gContainer.style.display = 'block';
-        aContainer.style.display = 'block';
-        renderTable(courseSelect.value);
-        renderAttendanceTable(courseSelect.value); // Render both
-    }
-
-    setTimeout(() => {
-        window.print();
-
-        // Restore
-        document.body.classList.remove('printing-mode');
-        // Restore view state
-        document.body.classList.remove('printing-mode');
-        // Restore view state (mapped to tab)
-        // Original view was likely 'grades' or 'attendance'. 
-        // switchTab handles display logic.
-        switchTab(originalView);
-    }, 500);
-}
 
 // Call init/population at start
 populateCourseDropdown();
