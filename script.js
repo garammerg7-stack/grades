@@ -355,6 +355,7 @@ function switchTab(tabId) {
     // Hide all containers first
     document.getElementById('grades-container').style.display = 'none';
     document.getElementById('attendance-container').style.display = 'none';
+    document.getElementById('settings-container').style.display = 'none';
 
     // Show active
     if (tabId === 'grades') {
@@ -366,10 +367,9 @@ function switchTab(tabId) {
         currentView = 'attendance';
         renderAttendanceTable(courseSelect.value);
     } else if (tabId === 'settings') {
-        // Settings/Admin view
-        // Maybe show a simple "Select Action" placeholder or keep last view?
-        // For now, let's keep Grades visible but show Admin Tools in Action Bar
-        document.getElementById('grades-container').style.display = 'block';
+        document.getElementById('grades-container').style.display = 'none'; // Hide grades
+        document.getElementById('settings-container').style.display = 'flex'; // Show settings
+        renderSettingsView(); // Populate list
     }
 
     renderActionBar(tabId);
@@ -878,6 +878,31 @@ function openCourseModal() {
     }
 
     modal.style.display = 'flex';
+}
+
+function renderSettingsView() {
+    const list = document.getElementById('settings-course-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        const item = document.createElement('div');
+        item.className = 'course-card'; // New class for card style
+        // inline styles for quick fix, or add to css later. 
+        // Using existing styles + some overrides
+        item.innerHTML = `
+            <div class="course-info">
+                <span class="course-title" style="${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
+                <span class="course-status">${data.hidden ? '(مخفي)' : '(نشط)'}</span>
+            </div>
+            <div class="course-actions">
+                <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
+                    ${data.hidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>'}
+                </button>
+            </div>
+        `;
+        list.appendChild(item);
+    }
 }
 
 function toggleCourseVisibility(key) {
