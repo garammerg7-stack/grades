@@ -50,6 +50,12 @@ const tableBody = document.getElementById('grades-body');
 const currentUserSpan = document.getElementById('current-user');
 const loginCourseSelect = document.getElementById('login-course');
 const tabBtns = document.querySelectorAll('.tab-btn');
+const usernameLabel = document.getElementById('username-label');
+const passwordGroup = document.getElementById('password-group');
+const passwordLabel = document.getElementById('password-label');
+const loginTitle = document.getElementById('login-title');
+const loginSubtitle = document.getElementById('login-subtitle');
+const loginCourseGroup = document.getElementById('login-course-group');
 const thControls = document.getElementById('th-controls');
 const viewBtns = document.querySelectorAll('.view-btn');
 const gradesContainer = document.getElementById('grades-container');
@@ -856,119 +862,6 @@ function shareAttendance(name, present, absent, excused) {
     window.open(url, '_blank');
 }
 
-function shareAttendance(name, present, absent, excused) {
-    const text = `*تقرير حضور الطالب:* ${name}%0a*حاضر:* ${present}%0a*غائب:* ${absent}%0a*معذور:* ${excused}`;
-    const url = `https://wa.me/?text=${text}`;
-    window.open(url, '_blank');
-}
-
-// --- Dynamic Course Management ---
-function populateCourseDropdown() {
-    courseSelect.innerHTML = '';
-    loginCourseSelect.innerHTML = '';
-
-    for (const [key, data] of Object.entries(COURSE_DATA)) {
-        // Show all to teacher in modal, but filter in dropdowns if hidden?
-        // Actually for simplicity: Teacher sees ALL in their dropdown to manage them.
-        // Student sees ONLY non-hidden.
-        if (data.hidden) continue;
-
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = data.title;
-        courseSelect.appendChild(option);
-
-        const loginOption = option.cloneNode(true);
-        loginCourseSelect.appendChild(loginOption);
-    }
-    // If teacher, append hidden courses to teacher dropdown specially? 
-    // Or simpler: Open "Manage" to unhide first.
-    // Let's stick to: Hidden = invisible in dropdowns. Use Modal to unhide.
-}
-
-function openCourseModal() {
-    const modal = document.getElementById('course-modal');
-    const list = document.getElementById('course-list');
-    list.innerHTML = '';
-
-    for (const [key, data] of Object.entries(COURSE_DATA)) {
-        const item = document.createElement('div');
-        item.className = 'course-item';
-        item.innerHTML = `
-            <span style="color: var(--text-primary); ${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
-            <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
-                ${data.hidden ? '👁️‍🗨️' : '👁️'}
-            </button>
-        `;
-        list.appendChild(item);
-    }
-    modal.style.display = 'flex';
-}
-
-function toggleCourseVisibility(key) {
-    if (COURSE_DATA[key]) {
-        COURSE_DATA[key].hidden = !COURSE_DATA[key].hidden;
-        if (db) saveToFirestore(key);
-        populateCourseDropdown();
-        openCourseModal();
-    }
-}
-
-function addNewCourse() {
-    const nameInput = document.getElementById('new-course-name');
-    const name = nameInput.value.trim();
-    if (!name) return;
-
-    const key = 'course_' + Date.now();
-    COURSE_DATA[key] = {
-        title: name,
-        students: [],
-        attendance: [],
-        hidden: false
-    };
-
-    if (db) saveToFirestore(key);
-
-    populateCourseDropdown();
-    nameInput.value = '';
-    openCourseModal();
-    alert('تم إضافة المقرر بنجاح');
-}
-
-// --- Printing System ---
-function printReport(type) {
-    // 1. Prepare View
-    const originalView = currentView;
-    const gContainer = document.getElementById('grades-container');
-    const aContainer = document.getElementById('attendance-container');
-
-    // Hide controls for print
-    document.body.classList.add('printing-mode');
-
-    if (type === 'grades') {
-        gContainer.style.display = 'block';
-        aContainer.style.display = 'none';
-        renderTable(courseSelect.value); // Ensure fresh render
-    } else if (type === 'attendance') {
-        gContainer.style.display = 'none';
-        aContainer.style.display = 'block';
-        renderAttendanceTable(courseSelect.value);
-    } else if (type === 'combined') {
-        gContainer.style.display = 'block';
-        aContainer.style.display = 'block';
-        renderTable(courseSelect.value);
-        renderAttendanceTable(courseSelect.value);
-    }
-
-    // 2. Print
-    setTimeout(() => {
-        window.print();
-
-        // 3. Cleanup
-        document.body.classList.remove('printing-mode');
-        switchView(originalView); // Restore state
-    }, 500);
-}
 
 // Call init/population at start
 populateCourseDropdown();
