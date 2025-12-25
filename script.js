@@ -48,16 +48,8 @@ const errorMsg = document.getElementById('error-msg');
 const courseSelect = document.getElementById('course-select');
 const tableBody = document.getElementById('grades-body');
 const currentUserSpan = document.getElementById('current-user');
-const uploadContainer = document.getElementById('teacher-actions');
-const tabBtns = document.querySelectorAll('.tab-btn');
-const usernameLabel = document.getElementById('username-label');
-const passwordGroup = document.getElementById('password-group');
-const passwordLabel = document.getElementById('password-label');
-const loginTitle = document.getElementById('login-title');
-const loginSubtitle = document.getElementById('login-subtitle');
-const loginCourseGroup = document.getElementById('login-course-group');
 const loginCourseSelect = document.getElementById('login-course');
-const resetBulkBtn = document.getElementById('reset-bulk-btn');
+const tabBtns = document.querySelectorAll('.tab-btn');
 const thControls = document.getElementById('th-controls');
 const viewBtns = document.querySelectorAll('.view-btn');
 const gradesContainer = document.getElementById('grades-container');
@@ -122,6 +114,14 @@ async function init() {
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => switchRole(btn.dataset.role));
     });
+
+    // Course Management
+    // 'add-course-btn' and 'close-course-modal' are static in Modal, safe to attach here.
+    const addCourseBtn = document.getElementById('add-course-btn');
+    if (addCourseBtn) addCourseBtn.addEventListener('click', addNewCourse);
+
+    const closeCourseBtn = document.getElementById('close-course-modal');
+    if (closeCourseBtn) closeCourseBtn.addEventListener('click', () => document.getElementById('course-modal').style.display = 'none');
 
     // Sync UI with initial role
     switchRole(userRole);
