@@ -69,77 +69,48 @@
 
     <!-- Dashboard Section -->
     <section id="dashboard-section" class="glass">
-        <header class="dashboard-header">
-            <div class="user-info">
-                <div class="avatar">A</div>
+        <!-- New Top Navigation -->
+        <nav class="main-nav">
+            <div class="nav-brand">
+                <div class="avatar">T</div>
                 <div>
-                    <h2 id="current-user">Ayad</h2>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">مدرس المادة</span>
+                    <h3 id="current-user">Teacher</h3>
+                    <span id="user-role-badge">Admin</span>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <div id="teacher-actions" style="display: flex; gap: 10px;">
-                    <button id="reset-bulk-btn" class="upload-btn"
-                        style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-                        <i class="fa-solid fa-user-lock"></i> تصفير كافة كلمات السر
-                    </button>
-                    <button id="manage-courses-btn" class="upload-btn"
-                        style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <i class="fa-solid fa-layer-group"></i> إدارة المقررات
-                    </button>
-                    <label for="attendance-upload" class="upload-btn"
-                        style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-                        <i class="fa-solid fa-calendar-days"></i> رفع ملف حضور
-                    </label>
-                    <input type="file" id="attendance-upload" accept=".xlsx, .xls" style="display: none;">
 
-                    <label for="grades-upload" class="upload-btn">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
-                    </label>
-                    <input type="file" id="grades-upload" accept=".xlsx, .xls" style="display: none;">
-
-                    <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 30px; margin: 0 5px;"></div>
-
-                    <button class="upload-btn" onclick="printReport('grades')" title="طباعة الدرجات"
-                        style="min-width: 40px; padding: 0 10px;">
-                        <i class="fa-solid fa-print"></i>
-                    </button>
-                    <button class="upload-btn" onclick="printReport('attendance')" title="طباعة الحضور"
-                        style="min-width: 40px; padding: 0 10px;">
-                        <i class="fa-solid fa-calendar-check"></i>
-                    </button>
-                    <button class="upload-btn" onclick="printReport('combined')" title="طباعة شاملة"
-                        style="min-width: 40px; padding: 0 10px;">
-                        <i class="fa-solid fa-file-pdf"></i>
-                    </button>
-                </div>
-
-                <button id="logout-btn" class="logout-btn">
-                    <i class="fa-solid fa-right-from-bracket"></i> تسجيل خروج
+            <div class="nav-links">
+                <button class="nav-btn active" data-tab="grades">
+                    <i class="fa-solid fa-graduation-cap"></i> الدرجات
+                </button>
+                <button class="nav-btn" data-tab="attendance">
+                    <i class="fa-solid fa-calendar-check"></i> الحضور
+                </button>
+                <button class="nav-btn" data-tab="settings" id="nav-settings-btn">
+                    <i class="fa-solid fa-gears"></i> الإدارة
                 </button>
             </div>
-        </header>
 
-        <div class="view-switcher">
-            <button class="view-btn active" data-view="grades">
-                <i class="fa-solid fa-graduation-cap"></i> الدرجات
+            <button id="logout-btn" class="logout-btn">
+                <i class="fa-solid fa-right-from-bracket"></i> خروج
             </button>
-            <button class="view-btn" data-view="attendance">
-                <i class="fa-solid fa-calendar-check"></i> الحضور والغياب
-            </button>
-        </div>
+        </nav>
 
+        <!-- Course Selector (Global) -->
         <div class="course-controls">
             <div class="course-select-wrapper">
-                <label style="display:block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
-                    <i class="fa-solid fa-book"></i> اختر المقرر الدراسي
-                </label>
+                <label><i class="fa-solid fa-book"></i> المقرر الحالي:</label>
                 <select id="course-select">
                     <!-- Dynamic -->
                 </select>
             </div>
-            <!-- Statistics or other controls could go here -->
         </div>
+
+        <!-- content-area for ACTIONS (Upload, Print) that change per tab -->
+        <div id="action-bar" class="action-bar">
+            <!-- Injected by JS based on active tab -->
+        </div>
+
 
         <div class="table-container" id="grades-container">
             <table>

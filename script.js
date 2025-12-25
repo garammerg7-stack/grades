@@ -113,15 +113,10 @@ async function init() {
     document.getElementById('grades-upload').addEventListener('change', (e) => processExcelFile(e, 'grades'));
     document.getElementById('attendance-upload').addEventListener('change', (e) => processExcelFile(e, 'attendance'));
 
-    // Course Management Listeners
-    document.getElementById('manage-courses-btn').addEventListener('click', openCourseModal);
-    document.getElementById('close-course-modal').addEventListener('click', () => document.getElementById('course-modal').style.display = 'none');
-    document.getElementById('add-course-btn').addEventListener('click', addNewCourse);
-
-    resetBulkBtn.addEventListener('click', resetAllCoursePasswords);
-
-    viewBtns.forEach(btn => {
-        btn.addEventListener('click', () => switchView(btn.dataset.view));
+    // Nav Listeners
+    const navBtns = document.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
     tabBtns.forEach(btn => {
@@ -317,23 +312,114 @@ function switchRole(role) {
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = '••••••••';
-        loginSubtitle.textContent = 'سجل دخولك كـ مدرس للمتابعة';
-        loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول';
+        const tabBtn = document.querySelector(`.tab-btn[data-role="${role}"]`);
+
+        // Update Role Badges
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if (tabBtn) tabBtn.classList.add('active');
+
+        // Security: Hide Settings for Students
+        const settingsBtn = document.getElementById('nav-settings-btn');
+        const roleBadge = document.getElementById('user-role-badge');
+
+        if (role === 'teacher') {
+            loginForm.style.display = 'block';
+            usernameInput.parentElement.style.display = 'block';
+            studentNameInput.parentElement.style.display = 'none';
+
+            loginCourseSelect.parentElement.style.display = 'none';
+            loginTitle.innerHTML = 'مرحبًا بكم<br>نظام الاستعلام عن درجات الطالب';
+            loginSubtitle.textContent = 'سجل دخولك كـ مدرس للمتابعة';
+
+            if (settingsBtn) settingsBtn.style.display = 'flex';
+            if (roleBadge) { roleBadge.textContent = 'Admin'; roleBadge.className = 'badge-admin'; }
+
+        } else {
+            loginForm.style.display = 'block';
+            usernameInput.parentElement.style.display = 'none';
+            studentNameInput.parentElement.style.display = 'block';
+
+            loginCourseSelect.parentElement.style.display = 'block';
+            populateCourseDropdown(); // Ensure student sees only public courses
+
+            loginTitle.innerHTML = 'بوابة الطالب<br>الاستعلام عن النتائج';
+            loginSubtitle.textContent = 'اختر المقرر واسمك للدخول';
+
+            if (settingsBtn) settingsBtn.style.display = 'none';
+            if (roleBadge) { roleBadge.textContent = 'Student'; roleBadge.className = 'badge-student'; }
+        }
     }
 }
 
-function switchView(view) {
-    currentView = view;
-    viewBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+// --- Navigation & Role Management ---
 
-    if (view === 'grades') {
-        gradesContainer.style.display = 'block';
-        attendanceContainer.style.display = 'none';
+function switchTab(tabId) {
+    const navBtns = document.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => {
+        if (btn.dataset.tab === tabId) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    // Hide all containers first
+    document.getElementById('grades-container').style.display = 'none';
+    document.getElementById('attendance-container').style.display = 'none';
+
+    // Show active
+    if (tabId === 'grades') {
+        document.getElementById('grades-container').style.display = 'block';
+        currentView = 'grades';
         renderTable(courseSelect.value);
-    } else {
-        gradesContainer.style.display = 'none';
-        attendanceContainer.style.display = 'block';
+    } else if (tabId === 'attendance') {
+        document.getElementById('attendance-container').style.display = 'block';
+        currentView = 'attendance';
         renderAttendanceTable(courseSelect.value);
+    } else if (tabId === 'settings') {
+        // Settings/Admin view
+        // Maybe show a simple "Select Action" placeholder or keep last view?
+        // For now, let's keep Grades visible but show Admin Tools in Action Bar
+        document.getElementById('grades-container').style.display = 'block';
+    }
+
+    renderActionBar(tabId);
+}
+
+function renderActionBar(tabId) {
+    const bar = document.getElementById('action-bar');
+    if (!bar) return;
+    bar.innerHTML = '';
+
+    if (userRole === 'student') return; // Students get no actions
+
+    if (tabId === 'grades') {
+        bar.innerHTML = `
+            <label for="grades-upload" class="upload-btn">
+                <i class="fa-solid fa-cloud-arrow-up"></i> رفع درجات
+            </label>
+            <button class="upload-btn" onclick="printReport('grades')">
+                <i class="fa-solid fa-print"></i> طباعة
+            </button>
+        `;
+    } else if (tabId === 'attendance') {
+        bar.innerHTML = `
+            <label for="attendance-upload" class="upload-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <i class="fa-solid fa-calendar-days"></i> رفع حضور
+            </label>
+            <button class="upload-btn" onclick="printReport('attendance')">
+                <i class="fa-solid fa-print"></i> طباعة
+            </button>
+        `;
+    } else if (tabId === 'settings') {
+        bar.innerHTML = `
+            <button id="manage-courses-btn" class="upload-btn" onclick="openCourseModal()" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
+                <i class="fa-solid fa-layer-group"></i> إدارة المقررات
+            </button>
+            <button id="reset-bulk-btn" class="upload-btn" onclick="resetAllCoursePasswords()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <i class="fa-solid fa-user-lock"></i> تصفير كلمات الست
+            </button>
+            <button class="upload-btn" onclick="printReport('combined')">
+                <i class="fa-solid fa-file-pdf"></i> تقرير شامل
+            </button>
+        `;
     }
 }
 
@@ -984,7 +1070,11 @@ function printReport(type) {
         // Restore
         document.body.classList.remove('printing-mode');
         // Restore view state
-        switchView(originalView);
+        document.body.classList.remove('printing-mode');
+        // Restore view state (mapped to tab)
+        // Original view was likely 'grades' or 'attendance'. 
+        // switchTab handles display logic.
+        switchTab(originalView);
     }, 500);
 }
 
