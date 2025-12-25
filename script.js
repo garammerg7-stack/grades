@@ -380,6 +380,7 @@ function switchTab(tabId) {
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
+        renderSettingsView();
     }
 
     renderActionBar(tabId);
@@ -405,11 +406,7 @@ function renderActionBar(tabId) {
             </label>
         `;
     } else if (tabId === 'settings') {
-        bar.innerHTML = `
-            <button id="manage-courses-btn" class="upload-btn" onclick="openCourseModal()" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
-                <i class="fa-solid fa-layer-group"></i> إدارة المقررات
-            </button>
-        `;
+        bar.innerHTML = ''; // No action buttons for Settings
     }
 }
 
@@ -887,6 +884,55 @@ function openCourseModal() {
     modal.style.display = 'flex';
 }
 
+
+function renderSettingsView() {
+    const list = document.getElementById('settings-course-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        const item = document.createElement('div');
+        item.className = 'course-card';
+        item.innerHTML = `
+            <div class="course-info">
+                <span class="course-title" style="${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
+                <span class="course-status">${data.hidden ? '(مخفي)' : '(نشط)'}</span>
+            </div>
+            <div class="course-actions">
+                <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
+                    ${data.hidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>'}
+                </button>
+            </div>
+        `;
+        list.appendChild(item);
+    }
+}
+
+async function addNewCourseFromSettings() {
+    const input = document.getElementById('settings-new-course');
+    const courseName = input.value.trim();
+    if (!courseName) return;
+
+    if (COURSE_DATA[courseName]) {
+        alert('هذا المقرر موجود بالفعل');
+        return;
+    }
+
+    const newKey = courseName;
+    COURSE_DATA[newKey] = {
+        title: courseName,
+        students: [],
+        hidden: false
+    };
+
+    if (db) await saveToFirestore(newKey);
+    else saveToLocalStorage();
+
+    input.value = '';
+    renderSettingsView();
+    populateCourseDropdown();
+    alert(`تم إضافة مقرر (${courseName}) بنجاح`);
+}
 
 function toggleCourseVisibility(key) {
     if (COURSE_DATA[key]) {

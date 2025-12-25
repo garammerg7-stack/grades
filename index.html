@@ -154,6 +154,21 @@
                     <i class="fa-solid fa-user-lock"></i> تصفير كلمات السر للجميع
                 </button>
             </div>
+
+            <div class="settings-section">
+                <h3><i class="fa-solid fa-layer-group"></i> إدارة المقررات</h3>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+                    <input type="text" id="settings-new-course" placeholder="اسم المقرر الجديد" class="login-input"
+                        style="flex: 1;">
+                    <button onclick="addNewCourseFromSettings()" class="login-btn"
+                        style="width: auto; padding: 0 2rem;">إضافة</button>
+                </div>
+
+                <div id="settings-course-list" class="course-grid">
+                    <!-- Course items injected by JS -->
+                </div>
+            </div>
         </div>
 
         <!-- Manage Courses Modal -->
