@@ -138,10 +138,14 @@ async function fetchFromFirestore() {
         }
         snapshot.forEach(doc => {
             const courseKey = doc.id;
+            const data = doc.data();
+
             if (COURSE_DATA[courseKey]) {
-                const data = doc.data();
-                COURSE_DATA[courseKey].students = data.students || [];
-                COURSE_DATA[courseKey].attendance = data.attendance || [];
+                // Merge into existing (preserves mock structure if needed)
+                Object.assign(COURSE_DATA[courseKey], data);
+            } else {
+                // Add new course from cloud
+                COURSE_DATA[courseKey] = data;
             }
         });
         console.log('Cloud data loaded successfully.');
@@ -153,10 +157,7 @@ async function fetchFromFirestore() {
 async function saveToFirestore(courseKey) {
     if (!db) return;
     try {
-        await db.collection('grades').doc(courseKey).set({
-            students: COURSE_DATA[courseKey].students,
-            attendance: COURSE_DATA[courseKey].attendance || []
-        });
+        await db.collection('grades').doc(courseKey).set(COURSE_DATA[courseKey]);
         console.log('Data saved to cloud.');
     } catch (e) {
         console.error('Error saving to Firestore:', e);
@@ -220,11 +221,8 @@ function loadDataFromLocalStorage() {
     if (storedData) {
         try {
             const parsed = JSON.parse(storedData);
-            Object.keys(parsed).forEach(key => {
-                if (COURSE_DATA[key]) {
-                    COURSE_DATA[key].students = parsed[key].students;
-                }
-            });
+            // Merge stored data into global object
+            Object.assign(COURSE_DATA, parsed);
         } catch (e) {
             console.error('Failed to load data', e);
         }
@@ -867,10 +865,10 @@ function renderSettingsView() {
 
     for (const [key, data] of Object.entries(COURSE_DATA)) {
         const item = document.createElement('div');
-        item.className = 'course-card';
+        item.className = `course-card ${data.hidden ? 'hidden' : ''}`;
         item.innerHTML = `
             <div class="course-info">
-                <span class="course-title" style="${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
+                <span class="course-title">${data.title}</span>
                 <span class="course-status">${data.hidden ? '(مخفي)' : '(نشط)'}</span>
             </div>
             <div class="course-actions">
@@ -913,31 +911,12 @@ function toggleCourseVisibility(key) {
     if (COURSE_DATA[key]) {
         COURSE_DATA[key].hidden = !COURSE_DATA[key].hidden;
         if (db) saveToFirestore(key);
+        else saveToLocalStorage();
         populateCourseDropdown();
-        openCourseModal(); // Refresh list
+        renderSettingsView(); // Refresh list
     }
 }
 
-function addNewCourse() {
-    const nameInput = document.getElementById('new-course-name');
-    const name = nameInput.value.trim();
-    if (!name) return;
-
-    const key = 'course_' + Date.now();
-    COURSE_DATA[key] = {
-        title: name,
-        students: [],
-        attendance: [],
-        hidden: false
-    };
-
-    if (db) saveToFirestore(key);
-
-    populateCourseDropdown();
-    nameInput.value = '';
-    openCourseModal();
-    alert('تم إضافة المقرر بنجاح');
-}
 
 // --- Printing System ---
 

@@ -321,6 +321,23 @@ option {
 }
 
 /* Attendance Table */
+.attendance-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--glass-border);
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .attendance-table th,
 .attendance-table td {
     text-align: center;
@@ -636,6 +653,32 @@ tbody tr:hover {
     border-radius: 8px;
     color: var(--text-secondary);
     line-height: 1.6;
+}
+
+/* Hidden Course State */
+.course-card.hidden {
+    opacity: 0.5;
+    background: rgba(0, 0, 0, 0.5) !important;
+    filter: grayscale(0.8);
+    position: relative;
+}
+
+.course-card.hidden::after {
+    content: "مخفي";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--error);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    pointer-events: none;
+}
+
+.course-card.hidden .course-title {
+    text-decoration: line-through;
 }
 
 .settings-info-card p {
