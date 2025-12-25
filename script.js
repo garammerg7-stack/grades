@@ -441,7 +441,8 @@ async function processExcelFile(e, type) {
             }
 
             // Process Grades
-            let idxId = 0, idxName = 0, idxClass = 0, idxFinal = 0, idxTotal = 0; // Default 0 to avoid crashes, will be set below
+            // Initialize with -1 to properly detect missing columns
+            let idxId = -1, idxName = -1, idxClass = -1, idxFinal = -1, idxTotal = -1;
 
             // Try to find indices dynamically
             headers.forEach((h, i) => {
@@ -454,22 +455,33 @@ async function processExcelFile(e, type) {
             });
 
             // Fallback if index 0 is not name (rare but safe)
-            if (idxName === 0 && !String(headers[0]).includes('اسم')) idxName = 1;
+            // If name column is still -1, try checking column 0 or 1
+            if (idxName === -1) {
+                if (String(headers[0]).includes('اسم')) idxName = 0;
+                else idxName = 1;
+            }
 
             const students = [];
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if (!row || !row[idxName]) continue;
+                if (!row) continue;
 
-                const cw = row[idxClass] || 0;
-                const fn = row[idxFinal] || 0;
+                // If name index is missing or valid, try to extract name
+                const rawName = idxName > -1 ? row[idxName] : null;
+                if (!rawName) continue;
+
+                const cw = (idxClass > -1 && row[idxClass]) ? row[idxClass] : 0;
+                const fn = (idxFinal > -1 && row[idxFinal]) ? row[idxFinal] : 0;
+
+                // Use explicit total if found, otherwise calculate it
+                let totalVal = (idxTotal > -1 && row[idxTotal]) ? row[idxTotal] : (Number(cw) + Number(fn));
 
                 students.push({
-                    id: row[idxId] || '',
-                    name: String(row[idxName]).trim(),
+                    id: (idxId > -1 ? row[idxId] : ''),
+                    name: String(rawName).trim(),
                     classwork: cw,
                     final: fn,
-                    total: row[idxTotal] || (Number(cw) + Number(fn))
+                    total: totalVal
                 });
             }
 
@@ -653,7 +665,10 @@ function renderTable(courseKey) {
         let controlCell = '';
         if (userRole === 'teacher') {
             controlCell = `
-                <td style="text-align:center;">
+                <td style="text-align:center; min-width: 100px;">
+                    <button onclick="shareGrade('${student.name.trim()}', '${cw}', '${fin}', '${student.total}')" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1); margin-left: 5px;" title="مشاركة عبر واتساب">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </button>
                     <button onclick="resetStudentPassword('${student.name.trim()}')" class="btn-reset-small" title="تصفير كلمة سر الطالب">
                         <i class="fa-solid fa-unlock-keyhole"></i>
                     </button>
@@ -661,7 +676,7 @@ function renderTable(courseKey) {
         }
 
         tr.innerHTML = `
-            <td style="font-weight: bold; color: var(--text-primary);">${student.name}</td>
+            <td style="font-weight: bold; color: var(--text-primary); text-align: right;">${student.name}</td>
             <td style="color: var(--text-primary);">${cw}</td>
             <td style="color: var(--text-primary);">${fin}</td>
             <td>
@@ -720,6 +735,12 @@ function renderAttendanceTable(courseKey) {
         tr.innerHTML = cells;
         attendanceBody.appendChild(tr);
     });
+}
+
+function shareGrade(name, cw, final, total) {
+    const text = `*نتائج الطالب:* ${name}%0a*أعمال الفصل:* ${cw}%0a*النهائي:* ${final}%0a*المجموع:* ${total}`;
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
 }
 
 init();
