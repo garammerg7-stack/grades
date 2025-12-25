@@ -324,8 +324,10 @@ option {
 .attendance-table th,
 .attendance-table td {
     text-align: center;
-    min-width: 45px;
-    font-size: 0.85rem;
+    min-width: 60px;
+    /* Expanded from 45px */
+    font-size: 0.9rem;
+    padding: 1rem 0.5rem;
 }
 
 .attendance-table td:first-child,
