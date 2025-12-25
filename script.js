@@ -377,7 +377,6 @@ function switchTab(tabId) {
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
-        renderSettingsView();
     }
 
     renderActionBar(tabId);
@@ -888,30 +887,6 @@ function openCourseModal() {
     modal.style.display = 'flex';
 }
 
-function renderSettingsView() {
-    const list = document.getElementById('settings-course-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    for (const [key, data] of Object.entries(COURSE_DATA)) {
-        const item = document.createElement('div');
-        item.className = 'course-card'; // New class for card style
-        // inline styles for quick fix, or add to css later. 
-        // Using existing styles + some overrides
-        item.innerHTML = `
-            <div class="course-info">
-                <span class="course-title" style="${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
-                <span class="course-status">${data.hidden ? '(مخفي)' : '(نشط)'}</span>
-            </div>
-            <div class="course-actions">
-                <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
-                    ${data.hidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>'}
-                </button>
-            </div>
-        `;
-        list.appendChild(item);
-    }
-}
 
 function toggleCourseVisibility(key) {
     if (COURSE_DATA[key]) {
