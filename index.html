@@ -36,10 +36,7 @@
             <div class="input-group" id="login-course-group" style="display: none;">
                 <label for="login-course">اختر المقرر</label>
                 <select id="login-course">
-                    <option value="arch">معمارية حاسوب</option>
-                    <option value="fund">أساسيات حاسوب</option>
-                    <option value="comm">مبادئ اتصالات</option>
-                    <option value="digit">إلكترونيات رقمية</option>
+                    <!-- Dynamic -->
                 </select>
             </div>
 
@@ -86,6 +83,10 @@
                         style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
                         <i class="fa-solid fa-user-lock"></i> تصفير كافة كلمات السر
                     </button>
+                    <button id="manage-courses-btn" class="upload-btn"
+                        style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <i class="fa-solid fa-layer-group"></i> إدارة المقررات
+                    </button>
                     <label for="attendance-upload" class="upload-btn"
                         style="background: linear-gradient(135deg, #f59e0b, #d97706);">
                         <i class="fa-solid fa-calendar-days"></i> رفع ملف حضور
@@ -96,6 +97,21 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف درجات
                     </label>
                     <input type="file" id="grades-upload" accept=".xlsx, .xls" style="display: none;">
+
+                    <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 30px; margin: 0 5px;"></div>
+
+                    <button class="upload-btn" onclick="printReport('grades')" title="طباعة الدرجات"
+                        style="min-width: 40px; padding: 0 10px;">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                    <button class="upload-btn" onclick="printReport('attendance')" title="طباعة الحضور"
+                        style="min-width: 40px; padding: 0 10px;">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </button>
+                    <button class="upload-btn" onclick="printReport('combined')" title="طباعة شاملة"
+                        style="min-width: 40px; padding: 0 10px;">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </button>
                 </div>
 
                 <button id="logout-btn" class="logout-btn">
@@ -119,10 +135,7 @@
                     <i class="fa-solid fa-book"></i> اختر المقرر الدراسي
                 </label>
                 <select id="course-select">
-                    <option value="arch">معمارية حاسوب</option>
-                    <option value="fund">أساسيات حاسوب</option>
-                    <option value="comm">مبادئ اتصالات</option>
-                    <option value="digit">إلكترونيات رقمية</option>
+                    <!-- Dynamic -->
                 </select>
             </div>
             <!-- Statistics or other controls could go here -->
@@ -154,6 +167,26 @@
                     <!-- Rows will be injected by JS -->
                 </tbody>
             </table>
+        </div>
+
+        <!-- Manage Courses Modal -->
+        <div id="course-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 1rem; color: var(--text-primary);">إدارة المقررات</h3>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                    <input type="text" id="new-course-name" placeholder="اسم المقرر الجديد" class="login-input">
+                    <button id="add-course-btn" class="login-btn" style="width: auto;">إضافة</button>
+                </div>
+
+                <div id="course-list"
+                    style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; margin-bottom: 1rem;">
+                    <!-- Course Items injected here -->
+                </div>
+
+                <button id="close-course-modal" class="login-btn"
+                    style="background: transparent; border: 1px solid var(--border); color: var(--text-primary);">إغلاق</button>
+            </div>
         </div>
     </section>
 

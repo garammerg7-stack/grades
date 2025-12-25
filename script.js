@@ -1,9 +1,9 @@
 // Mock Data mimicking Excel files (Initial load only if Firestore is empty)
 let COURSE_DATA = {
-    "arch": { title: "معمارية حاسوب", students: [], attendance: [] },
-    "fund": { title: "أساسيات حاسوب", students: [], attendance: [] },
-    "comm": { title: "مبادئ اتصالات", students: [], attendance: [] },
-    "digit": { title: "إلكترونيات رقمية", students: [], attendance: [] }
+    "arch": { title: "معمارية حاسوب", students: [], attendance: [], hidden: false },
+    "fund": { title: "أساسيات حاسوب", students: [], attendance: [], hidden: false },
+    "comm": { title: "مبادئ اتصالات", students: [], attendance: [], hidden: false },
+    "digit": { title: "إلكترونيات رقمية", students: [], attendance: [], hidden: false }
 };
 
 // --- Firebase Configuration ---
@@ -112,6 +112,11 @@ async function init() {
     // Separate Listeners
     document.getElementById('grades-upload').addEventListener('change', (e) => processExcelFile(e, 'grades'));
     document.getElementById('attendance-upload').addEventListener('change', (e) => processExcelFile(e, 'attendance'));
+
+    // Course Management Listeners
+    document.getElementById('manage-courses-btn').addEventListener('click', openCourseModal);
+    document.getElementById('close-course-modal').addEventListener('click', () => document.getElementById('course-modal').style.display = 'none');
+    document.getElementById('add-course-btn').addEventListener('click', addNewCourse);
 
     resetBulkBtn.addEventListener('click', resetAllCoursePasswords);
 
@@ -697,6 +702,7 @@ function renderAttendanceTable(courseKey) {
     for (let i = 1; i <= 14; i++) {
         headHtml += `<th>أسبوع ${i}</th>`;
     }
+    if (userRole === 'teacher') headHtml += `<th>إجراءات</th>`;
     headHtml += '</tr>';
     attendanceHead.innerHTML = headHtml;
 
@@ -732,6 +738,20 @@ function renderAttendanceTable(courseKey) {
             cells += `<td><span class="att-icon att-undefined">N</span></td>`;
         }
 
+        if (userRole === 'teacher') {
+            // Calculate stats for sharing
+            const present = row.sessions.filter(s => s === '1').length;
+            const absent = row.sessions.filter(s => s === '0').length;
+            const excused = row.sessions.filter(s => s === 'م').length;
+
+            cells += `
+                <td style="text-align:center;">
+                    <button onclick="shareAttendance('${row.name.trim()}', ${present}, ${absent}, ${excused})" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);" title="مشاركة الحضور واتساب">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </button>
+                </td>`;
+        }
+
         tr.innerHTML = cells;
         attendanceBody.appendChild(tr);
     });
@@ -743,4 +763,231 @@ function shareGrade(name, cw, final, total) {
     window.open(url, '_blank');
 }
 
+function shareAttendance(name, present, absent, excused) {
+    const text = `*تقرير حضور الطالب:* ${name}%0a*حاضر:* ${present}%0a*غائب:* ${absent}%0a*معذور:* ${excused}`;
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+}
+
+function shareAttendance(name, present, absent, excused) {
+    const text = `*تقرير حضور الطالب:* ${name}%0a*حاضر:* ${present}%0a*غائب:* ${absent}%0a*معذور:* ${excused}`;
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+}
+
+// --- Dynamic Course Management ---
+function populateCourseDropdown() {
+    courseSelect.innerHTML = '';
+    loginCourseSelect.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        // Show all to teacher in modal, but filter in dropdowns if hidden?
+        // Actually for simplicity: Teacher sees ALL in their dropdown to manage them.
+        // Student sees ONLY non-hidden.
+        if (data.hidden) continue;
+
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = data.title;
+        courseSelect.appendChild(option);
+
+        const loginOption = option.cloneNode(true);
+        loginCourseSelect.appendChild(loginOption);
+    }
+    // If teacher, append hidden courses to teacher dropdown specially? 
+    // Or simpler: Open "Manage" to unhide first.
+    // Let's stick to: Hidden = invisible in dropdowns. Use Modal to unhide.
+}
+
+function openCourseModal() {
+    const modal = document.getElementById('course-modal');
+    const list = document.getElementById('course-list');
+    list.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        const item = document.createElement('div');
+        item.className = 'course-item';
+        item.innerHTML = `
+            <span style="color: var(--text-primary); ${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
+            <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
+                ${data.hidden ? '👁️‍🗨️' : '👁️'}
+            </button>
+        `;
+        list.appendChild(item);
+    }
+    modal.style.display = 'flex';
+}
+
+function toggleCourseVisibility(key) {
+    if (COURSE_DATA[key]) {
+        COURSE_DATA[key].hidden = !COURSE_DATA[key].hidden;
+        if (db) saveToFirestore(key);
+        populateCourseDropdown();
+        openCourseModal();
+    }
+}
+
+function addNewCourse() {
+    const nameInput = document.getElementById('new-course-name');
+    const name = nameInput.value.trim();
+    if (!name) return;
+
+    const key = 'course_' + Date.now();
+    COURSE_DATA[key] = {
+        title: name,
+        students: [],
+        attendance: [],
+        hidden: false
+    };
+
+    if (db) saveToFirestore(key);
+
+    populateCourseDropdown();
+    nameInput.value = '';
+    openCourseModal();
+    alert('تم إضافة المقرر بنجاح');
+}
+
+// --- Printing System ---
+function printReport(type) {
+    // 1. Prepare View
+    const originalView = currentView;
+    const gContainer = document.getElementById('grades-container');
+    const aContainer = document.getElementById('attendance-container');
+
+    // Hide controls for print
+    document.body.classList.add('printing-mode');
+
+    if (type === 'grades') {
+        gContainer.style.display = 'block';
+        aContainer.style.display = 'none';
+        renderTable(courseSelect.value); // Ensure fresh render
+    } else if (type === 'attendance') {
+        gContainer.style.display = 'none';
+        aContainer.style.display = 'block';
+        renderAttendanceTable(courseSelect.value);
+    } else if (type === 'combined') {
+        gContainer.style.display = 'block';
+        aContainer.style.display = 'block';
+        renderTable(courseSelect.value);
+        renderAttendanceTable(courseSelect.value);
+    }
+
+    // 2. Print
+    setTimeout(() => {
+        window.print();
+
+        // 3. Cleanup
+        document.body.classList.remove('printing-mode');
+        switchView(originalView); // Restore state
+    }, 500);
+}
+
+// Call init/population at start
+populateCourseDropdown();
+// --- Dynamic Course Management ---
+function populateCourseDropdown() {
+    courseSelect.innerHTML = '';
+    loginCourseSelect.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        if (data.hidden) continue;
+
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = data.title;
+        courseSelect.appendChild(option);
+
+        const loginOption = option.cloneNode(true);
+        loginCourseSelect.appendChild(loginOption);
+    }
+}
+
+function openCourseModal() {
+    const modal = document.getElementById('course-modal');
+    // Re-render list on open
+    const list = document.getElementById('course-list');
+    list.innerHTML = '';
+
+    for (const [key, data] of Object.entries(COURSE_DATA)) {
+        const item = document.createElement('div');
+        item.className = 'course-item';
+        item.innerHTML = `
+            <span style="color: var(--text-primary); ${data.hidden ? 'opacity: 0.5; text-decoration: line-through;' : ''}">${data.title}</span>
+            <button class="course-toggle-btn" onclick="toggleCourseVisibility('${key}')" title="${data.hidden ? 'إظهار' : 'إخفاء'}">
+                ${data.hidden ? '👁️‍🗨️' : '👁️'}
+            </button>
+        `;
+        list.appendChild(item);
+    }
+
+    modal.style.display = 'flex';
+}
+
+function toggleCourseVisibility(key) {
+    if (COURSE_DATA[key]) {
+        COURSE_DATA[key].hidden = !COURSE_DATA[key].hidden;
+        if (db) saveToFirestore(key);
+        populateCourseDropdown();
+        openCourseModal(); // Refresh list
+    }
+}
+
+function addNewCourse() {
+    const nameInput = document.getElementById('new-course-name');
+    const name = nameInput.value.trim();
+    if (!name) return;
+
+    const key = 'course_' + Date.now();
+    COURSE_DATA[key] = {
+        title: name,
+        students: [],
+        attendance: [],
+        hidden: false
+    };
+
+    if (db) saveToFirestore(key);
+
+    populateCourseDropdown();
+    nameInput.value = '';
+    openCourseModal();
+    alert('تم إضافة المقرر بنجاح');
+}
+
+// --- Printing System ---
+function printReport(type) {
+    const originalView = currentView;
+    const gContainer = document.getElementById('grades-container');
+    const aContainer = document.getElementById('attendance-container');
+
+    document.body.classList.add('printing-mode');
+
+    // Force show relevant containers
+    if (type === 'grades') {
+        gContainer.style.display = 'block';
+        aContainer.style.display = 'none';
+        renderTable(courseSelect.value);
+    } else if (type === 'attendance') {
+        gContainer.style.display = 'none';
+        aContainer.style.display = 'block';
+        renderAttendanceTable(courseSelect.value);
+    } else if (type === 'combined') {
+        gContainer.style.display = 'block';
+        aContainer.style.display = 'block';
+        renderTable(courseSelect.value);
+        renderAttendanceTable(courseSelect.value); // Render both
+    }
+
+    setTimeout(() => {
+        window.print();
+
+        // Restore
+        document.body.classList.remove('printing-mode');
+        // Restore view state
+        switchView(originalView);
+    }, 500);
+}
+
+// Call init/population at start
+populateCourseDropdown();
 init();
