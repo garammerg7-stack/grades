@@ -94,7 +94,10 @@ async function init() {
     }
 
     loginForm.addEventListener('submit', handleLogin);
-    courseSelect.addEventListener('change', (e) => renderTable(e.target.value));
+    courseSelect.addEventListener('change', (e) => {
+        if (currentView === 'grades') renderTable(e.target.value);
+        else renderAttendanceTable(e.target.value);
+    });
 
     // Update student names when course changes in login screen
     loginCourseSelect.addEventListener('change', populateStudentNames);
