@@ -814,12 +814,12 @@ function renderAttendanceTable(courseKey) {
         }
 
         if (userRole === 'teacher') {
-            // Prepare sessions for sharing (stringified array for onclick)
             const sessionsData = JSON.stringify(row.sessions).replace(/"/g, '&quot;');
+            const safeName = row.name.trim().replace(/'/g, "\\'");
 
             cells += `
                 <td style="text-align:center;">
-                    <button onclick="shareAttendance('${row.name.trim()}', ${sessionsData})" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);" title="مشاركة الحضور واتساب">
+                    <button onclick="shareAttendance('${safeName}', ${sessionsData})" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);" title="مشاركة الحضور واتساب">
                         <i class="fa-brands fa-whatsapp"></i>
                     </button>
                 </td>`;
@@ -831,8 +831,11 @@ function renderAttendanceTable(courseKey) {
 }
 
 function shareGrade(name, cw, final, total) {
-    const text = `*نتائج الطالب:* ${name}\n*أعمال الفصل:* ${cw}\n*النهائي:* ${final}\n*المجموع:* ${total}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const text = `*نتائج الطالب:* ${name}\n` +
+        `*أعمال الفصل:* ${cw}\n` +
+        `*النهائي:* ${final}\n` +
+        `*المجموع:* ${total}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
 }
 
@@ -843,11 +846,14 @@ function shareAttendance(name, sessions) {
         "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "الثالث عشر", "الرابع عشر"
     ];
 
+    const checkMark = '\u2714\uFE0F'; // Robust Unicode escape for ✔️
+    const crossMark = '\u274C';     // Robust Unicode escape for ❌
+
     for (let i = 0; i < 14; i++) {
         const s = sessions[i] || 'N';
         let status = s;
-        if (s === '1') status = '✔️';
-        else if (s === '0') status = '❌';
+        if (s === '1') status = checkMark;
+        else if (s === '0') status = crossMark;
         else if (s === 'م') status = 'م';
         else status = 'N';
 
@@ -855,7 +861,7 @@ function shareAttendance(name, sessions) {
     }
 
     const text = `*تقرير حضور الطالب:* ${name}${weekDetails}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
 }
 
