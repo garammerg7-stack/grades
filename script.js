@@ -73,14 +73,16 @@ async function init() {
     const isFirebaseActive = initFirebase();
 
     if (isFirebaseActive) {
-        // Essential: First fetch data once, but also listen for auth state
-        await fetchFromFirestore();
-
-        auth.onAuthStateChanged(user => {
+        // Listen for auth state
+        auth.onAuthStateChanged(async user => {
             if (user && userRole === 'teacher') {
                 // Persistent logged-in state for teacher
                 isAuthenticated = true;
                 currentUserSpan.textContent = user.email.split('@')[0];
+
+                // Fetch data ONLY after successful login
+                await fetchFromFirestore();
+
                 showDashboard();
             } else if (!user && isAuthenticated && userRole === 'teacher') {
                 // If user logs out or session expires while on dashboard
@@ -149,6 +151,7 @@ async function fetchFromFirestore() {
             }
         });
         console.log('Cloud data loaded successfully.');
+        populateCourseDropdown(); // Refresh UI after load
     } catch (e) {
         console.error('Error fetching from Firestore:', e);
     }
@@ -157,11 +160,14 @@ async function fetchFromFirestore() {
 async function saveToFirestore(courseKey) {
     if (!db) return;
     try {
-        await db.collection('grades').doc(courseKey).set(COURSE_DATA[courseKey]);
-        console.log('Data saved to cloud.');
+        const dataToSave = COURSE_DATA[courseKey];
+        if (!dataToSave) return;
+
+        await db.collection('grades').doc(courseKey).set(dataToSave);
+        console.log(`Cloud save successful for course: ${courseKey}`);
     } catch (e) {
         console.error('Error saving to Firestore:', e);
-        alert('حدث خطأ أثناء الحفظ السحابي');
+        // Don't alert here to avoid spamming if called from loops
     }
 }
 
@@ -223,6 +229,7 @@ function loadDataFromLocalStorage() {
             const parsed = JSON.parse(storedData);
             // Merge stored data into global object
             Object.assign(COURSE_DATA, parsed);
+            populateCourseDropdown(); // Refresh UI after load
         } catch (e) {
             console.error('Failed to load data', e);
         }
@@ -566,7 +573,7 @@ async function processExcelFile(e, type) {
         }
 
         if (db) await saveToFirestore(courseKey);
-        else saveDataToLocalStorage();
+        else saveToLocalStorage();
 
         if (currentView === 'grades') renderTable(courseKey);
         else renderAttendanceTable(courseKey);
@@ -670,13 +677,12 @@ function showDashboard() {
     passwordInput.value = '';
     errorMsg.style.display = 'none';
 
-    if (userRole === 'student') {
-        uploadContainer.style.display = 'none';
-        thControls.style.display = 'none';
-    } else {
-        uploadContainer.style.display = 'flex';
+    if (userRole === 'teacher') {
         thControls.style.display = 'table-cell';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
+    } else {
+        thControls.style.display = 'none';
+        currentUserSpan.nextElementSibling.textContent = 'طالب';
     }
 
     if (currentView === 'grades') renderTable(courseSelect.value);
@@ -836,8 +842,6 @@ function shareAttendance(name, present, absent, excused) {
 }
 
 
-// Call init/population at start
-populateCourseDropdown();
 // --- Dynamic Course Management ---
 function populateCourseDropdown() {
     courseSelect.innerHTML = '';
@@ -895,16 +899,24 @@ async function addNewCourseFromSettings() {
     COURSE_DATA[newKey] = {
         title: courseName,
         students: [],
+        attendance: [], // Essential fix: missing field
         hidden: false
     };
 
-    if (db) await saveToFirestore(newKey);
-    else saveToLocalStorage();
-
+    // Optimistic UI Update
     input.value = '';
     renderSettingsView();
     populateCourseDropdown();
-    alert(`تم إضافة مقرر (${courseName}) بنجاح`);
+
+    try {
+        // Save to BOTH for extra persistence/local fallback
+        saveToLocalStorage();
+        if (db) await saveToFirestore(newKey);
+        alert(`تم إضافة مقرر (${courseName}) بنجاح`);
+    } catch (e) {
+        console.error('Persistence failed:', e);
+        alert('حدثت مشكلة في حفظ المقرر الجديد سحابياً');
+    }
 }
 
 function toggleCourseVisibility(key) {
@@ -920,6 +932,5 @@ function toggleCourseVisibility(key) {
 
 // --- Printing System ---
 
-// Call init/population at start
-populateCourseDropdown();
+// --- Final Initialization ---
 init();
