@@ -345,6 +345,12 @@ function switchRole(role) {
 // --- Navigation & Role Management ---
 
 function switchTab(tabId) {
+    // Security: Secondary check to prevent students from accessing settings
+    if (userRole !== 'teacher' && tabId === 'settings') {
+        alert('ليس لديك صلاحية للوصول إلى هذا القسم');
+        return;
+    }
+
     const navBtns = document.querySelectorAll('.nav-btn');
     navBtns.forEach(btn => {
         if (btn.dataset.tab === tabId) btn.classList.add('active');
@@ -685,9 +691,14 @@ function showDashboard() {
     if (userRole === 'teacher') {
         thControls.style.display = 'table-cell';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
+        if (settingsBtn) settingsBtn.style.display = 'flex';
     } else {
         thControls.style.display = 'none';
         currentUserSpan.nextElementSibling.textContent = 'طالب';
+        if (settingsBtn) settingsBtn.style.display = 'none';
+
+        // Ensure student is not on settings tab if they just logged in
+        if (currentView === 'settings') switchTab('grades');
     }
 
     if (currentView === 'grades') renderTable(courseSelect.value);
