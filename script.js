@@ -860,7 +860,12 @@ function shareAttendance(name, sessions) {
         weekDetails += `\nالأسبوع ${arabicWeeks[i]}: ${status}`;
     }
 
-    const text = `*تقرير حضور الطالب:* ${name}${weekDetails}`;
+    const text = `*تقرير حضور الطالب:* ${name}${weekDetails}\n\n` +
+        `*ملحوظة:*\n` +
+        `${checkMark} حاضر\n` +
+        `${crossMark} غائب دون عذر\n` +
+        `م غائب بعذر\n` +
+        `N غير معرف`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
 }
