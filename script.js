@@ -831,8 +831,8 @@ function renderAttendanceTable(courseKey) {
 }
 
 function shareGrade(name, cw, final, total) {
-    const text = `*نتائج الطالب:* ${name}%0a*أعمال الفصل:* ${cw}%0a*النهائي:* ${final}%0a*المجموع:* ${total}`;
-    const url = `https://wa.me/?text=${text}`;
+    const text = `*نتائج الطالب:* ${name}\n*أعمال الفصل:* ${cw}\n*النهائي:* ${final}\n*المجموع:* ${total}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
 }
 
@@ -851,11 +851,11 @@ function shareAttendance(name, sessions) {
         else if (s === 'م') status = 'م';
         else status = 'N';
 
-        weekDetails += `%0aالأسبوع ${arabicWeeks[i]}: ${status}`;
+        weekDetails += `\nالأسبوع ${arabicWeeks[i]}: ${status}`;
     }
 
     const text = `*تقرير حضور الطالب:* ${name}${weekDetails}`;
-    const url = `https://wa.me/?text=${text}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
 }
 
