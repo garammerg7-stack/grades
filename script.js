@@ -48,14 +48,8 @@ const errorMsg = document.getElementById('error-msg');
 const courseSelect = document.getElementById('course-select');
 const tableBody = document.getElementById('grades-body');
 const currentUserSpan = document.getElementById('current-user');
-const loginCourseSelect = document.getElementById('login-course');
 const tabBtns = document.querySelectorAll('.tab-btn');
 const usernameLabel = document.getElementById('username-label');
-const passwordGroup = document.getElementById('password-group');
-const passwordLabel = document.getElementById('password-label');
-const loginTitle = document.getElementById('login-title');
-const loginSubtitle = document.getElementById('login-subtitle');
-const loginCourseGroup = document.getElementById('login-course-group');
 const thControls = document.getElementById('th-controls');
 const viewBtns = document.querySelectorAll('.view-btn');
 const gradesContainer = document.getElementById('grades-container');
@@ -99,10 +93,7 @@ async function init() {
         else renderAttendanceTable(e.target.value);
     });
 
-    // Update student names when course changes in login screen
-    loginCourseSelect.addEventListener('change', populateStudentNames);
-
-    // Privacy-focused predictive search: Only show names AFTER 3 characters
+    // Student search now searches across all courses
     studentNameInput.addEventListener('input', () => {
         filterStudentNames();
         checkStudentStatus();
@@ -252,8 +243,6 @@ async function populateStudentNames() {
 
 function filterStudentNames() {
     const query = studentNameInput.value.trim();
-    const courseKey = loginCourseSelect.value;
-    const course = COURSE_DATA[courseKey];
 
     // Clear list if query is too short
     if (query.length < 3) {
@@ -261,18 +250,22 @@ function filterStudentNames() {
         return;
     }
 
-    if (!course) return;
+    // Filter names that contain the query across ALL courses
+    const allStudentNames = new Set();
+    for (const data of Object.values(COURSE_DATA)) {
+        if (data.hidden) continue;
+        data.students.forEach(s => {
+            if (s.name.trim().includes(query)) {
+                allStudentNames.add(s.name.trim());
+            }
+        });
+    }
 
-    // Filter names that contain the query
-    const matches = course.students.filter(s =>
-        s.name.trim().includes(query)
-    );
-
-    // Update datalist with ONLY matched names
+    // Update datalist with matched names
     studentNamesDatalist.innerHTML = '';
-    matches.forEach(s => {
+    allStudentNames.forEach(name => {
         const opt = document.createElement('option');
-        opt.value = s.name.trim();
+        opt.value = name;
         studentNamesDatalist.appendChild(opt);
     });
 }
@@ -281,12 +274,14 @@ async function checkStudentStatus() {
     const name = studentNameInput.value.trim();
     if (!name || name.length < 3) return;
 
-    // Only check if it's a valid student in the list
-    const courseKey = loginCourseSelect.value;
-    const course = COURSE_DATA[courseKey];
-    if (!course) return;
-
-    const studentExists = course.students.some(s => s.name.trim() === name);
+    // Only check if it's a valid student in ANY course
+    let studentExists = false;
+    for (const data of Object.values(COURSE_DATA)) {
+        if (data.students.some(s => s.name.trim() === name)) {
+            studentExists = true;
+            break;
+        }
+    }
     if (!studentExists) return;
 
     const storedPass = await getStudentPassword(name);
@@ -313,7 +308,6 @@ function switchRole(role) {
     if (role === 'student') {
         usernameGroup.style.display = 'none';
         studentNameGroup.style.display = 'block';
-        loginCourseGroup.style.display = 'block';
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
@@ -339,7 +333,6 @@ function switchRole(role) {
             usernameInput.parentElement.style.display = 'block';
             studentNameInput.parentElement.style.display = 'none';
 
-            loginCourseSelect.parentElement.style.display = 'none';
             loginTitle.innerHTML = 'مرحبًا بكم<br>نظام الاستعلام عن درجات الطالب';
             loginSubtitle.textContent = 'سجل دخولك كـ مدرس للمتابعة';
 
@@ -627,13 +620,18 @@ async function handleLogin(e) {
             await auth.signInWithEmailAndPassword(inputVal, password);
         } else {
             console.log('Student logic executing...');
-            const selectedCourseKey = loginCourseSelect.value;
             if (db) await fetchFromFirestore();
-            const selectedCourse = COURSE_DATA[selectedCourseKey];
 
-            const student = selectedCourse.students.find(s => s.name.trim() === inputVal);
-            if (!student) {
-                showError(`عذراً، لم يتم العثور على اسمك في سجلات هذا المقرر`);
+            // Find all courses for this student
+            const studentCourses = [];
+            for (const [key, data] of Object.entries(COURSE_DATA)) {
+                if (data.students.some(s => s.name.trim() === inputVal)) {
+                    studentCourses.push(key);
+                }
+            }
+
+            if (studentCourses.length === 0) {
+                showError(`عذراً، لم يتم العثور على اسمك في سجلاتنا`);
                 return;
             }
 
@@ -652,9 +650,11 @@ async function handleLogin(e) {
 
             isAuthenticated = true;
             currentStudentName = inputVal;
-            currentUserSpan.textContent = student.name;
+            currentUserSpan.textContent = inputVal;
             currentUserSpan.nextElementSibling.textContent = 'طالب';
-            courseSelect.value = selectedCourseKey;
+
+            // Default to the first course they are enrolled in
+            courseSelect.value = studentCourses[0];
             showDashboard();
         }
     } catch (error) {
@@ -678,7 +678,9 @@ function showDashboard() {
     dashboardSection.style.display = 'flex';
     usernameInput.value = '';
     passwordInput.value = '';
-    errorMsg.style.display = 'none';
+    if (errorMsg) errorMsg.style.display = 'none';
+
+    populateCourseDropdown(); // Refresh dropdown for the current user (role check inside)
 
     if (userRole === 'teacher') {
         thControls.style.display = 'table-cell';
@@ -874,18 +876,21 @@ function shareAttendance(name, sessions) {
 // --- Dynamic Course Management ---
 function populateCourseDropdown() {
     courseSelect.innerHTML = '';
-    loginCourseSelect.innerHTML = '';
+    // loginCourseSelect.innerHTML = ''; // No longer used for login
 
     for (const [key, data] of Object.entries(COURSE_DATA)) {
         if (data.hidden) continue;
+
+        // If student is logged in, only show THEIR courses
+        if (userRole === 'student' && isAuthenticated) {
+            const isEnrolled = data.students.some(s => s.name.trim() === currentStudentName);
+            if (!isEnrolled) continue;
+        }
 
         const option = document.createElement('option');
         option.value = key;
         option.textContent = data.title;
         courseSelect.appendChild(option);
-
-        const loginOption = option.cloneNode(true);
-        loginCourseSelect.appendChild(loginOption);
     }
 }
 
