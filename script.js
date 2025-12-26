@@ -814,14 +814,12 @@ function renderAttendanceTable(courseKey) {
         }
 
         if (userRole === 'teacher') {
-            // Calculate stats for sharing
-            const present = row.sessions.filter(s => s === '1').length;
-            const absent = row.sessions.filter(s => s === '0').length;
-            const excused = row.sessions.filter(s => s === 'م').length;
+            // Prepare sessions for sharing (stringified array for onclick)
+            const sessionsData = JSON.stringify(row.sessions).replace(/"/g, '&quot;');
 
             cells += `
                 <td style="text-align:center;">
-                    <button onclick="shareAttendance('${row.name.trim()}', ${present}, ${absent}, ${excused})" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);" title="مشاركة الحضور واتساب">
+                    <button onclick="shareAttendance('${row.name.trim()}', ${sessionsData})" class="btn-reset-small" style="color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);" title="مشاركة الحضور واتساب">
                         <i class="fa-brands fa-whatsapp"></i>
                     </button>
                 </td>`;
@@ -838,8 +836,25 @@ function shareGrade(name, cw, final, total) {
     window.open(url, '_blank');
 }
 
-function shareAttendance(name, present, absent, excused) {
-    const text = `*تقرير حضور الطالب:* ${name}%0a*حاضر:* ${present}%0a*غائب:* ${absent}%0a*معذور:* ${excused}`;
+function shareAttendance(name, sessions) {
+    let weekDetails = '';
+    const arabicWeeks = [
+        "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع",
+        "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "الثالث عشر", "الرابع عشر"
+    ];
+
+    for (let i = 0; i < 14; i++) {
+        const s = sessions[i] || 'N';
+        let status = s;
+        if (s === '1') status = '✔️';
+        else if (s === '0') status = '❌';
+        else if (s === 'م') status = 'م';
+        else status = 'N';
+
+        weekDetails += `%0aالأسبوع ${arabicWeeks[i]}: ${status}`;
+    }
+
+    const text = `*تقرير حضور الطالب:* ${name}${weekDetails}`;
     const url = `https://wa.me/?text=${text}`;
     window.open(url, '_blank');
 }
