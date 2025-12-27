@@ -695,9 +695,11 @@ function showDashboard() {
     } else {
         thControls.style.display = 'none';
         currentUserSpan.nextElementSibling.textContent = 'طالب';
-        if (settingsBtn) settingsBtn.style.display = 'none';
 
-        // Ensure student is not on settings tab if they just logged in
+        // Physically remove the administration button for students
+        if (settingsBtn) settingsBtn.remove();
+
+        // Ensure student is not on settings tab
         if (currentView === 'settings') switchTab('grades');
     }
 
