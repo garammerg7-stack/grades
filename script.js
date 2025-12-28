@@ -686,17 +686,31 @@ function showDashboard() {
     passwordInput.value = '';
     if (errorMsg) errorMsg.style.display = 'none';
 
+    const navLinks = document.querySelector('.nav-links');
+    let settingsBtn = document.getElementById('nav-settings-btn');
+
     populateCourseDropdown(); // Refresh dropdown for the current user (role check inside)
 
     if (userRole === 'teacher') {
         thControls.style.display = 'table-cell';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
+
+        // If button was removed for a previous student session, restore it
+        if (!settingsBtn && navLinks) {
+            settingsBtn = document.createElement('button');
+            settingsBtn.className = 'nav-btn';
+            settingsBtn.id = 'nav-settings-btn';
+            settingsBtn.dataset.tab = 'settings';
+            settingsBtn.innerHTML = '<i class="fa-solid fa-gears"></i> الإدارة';
+            settingsBtn.addEventListener('click', () => switchTab('settings'));
+            navLinks.appendChild(settingsBtn);
+        }
         if (settingsBtn) settingsBtn.style.display = 'flex';
     } else {
         thControls.style.display = 'none';
         currentUserSpan.nextElementSibling.textContent = 'طالب';
 
-        // Physically remove the administration button for students
+        // Physically remove the administration button for students (Fatal Error prevention)
         if (settingsBtn) settingsBtn.remove();
 
         // Ensure student is not on settings tab
