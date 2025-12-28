@@ -311,7 +311,9 @@ function switchRole(role) {
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = 'أدخل كلمة السر (أو اختر واحدة جديدة)';
-        loginSubtitle.textContent = 'اختر اسمك الثلاثي وكلمة السر للاطلاع على النتيجة';
+        loginSubtitle.textContent = 'سجل دخولك كـ طالب للمتابعة';
+        const studentLabel = document.getElementById('student-name-label');
+        if (studentLabel) studentLabel.textContent = 'الاسم';
 
         if (settingsBtn) settingsBtn.style.display = 'none';
         if (roleBadge) { roleBadge.textContent = 'Student'; roleBadge.className = 'badge-student'; }
