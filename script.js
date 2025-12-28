@@ -722,17 +722,27 @@ function showDashboard() {
 }
 
 async function handleLogout() {
-    if (userRole === 'teacher' && auth) {
-        await auth.signOut();
+    try {
+        if (userRole === 'teacher' && auth) {
+            await auth.signOut();
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
     }
 
     isAuthenticated = false;
     currentStudentName = '';
-    switchRole('teacher');
 
+    // Reset UI to login state
     dashboardSection.style.display = 'none';
     loginSection.style.display = 'block';
+
+    // Reset role to teacher by default for next login
+    switchRole('teacher');
+
+    // Clear sensitive data from view
     tableBody.innerHTML = '';
+    attendanceBody.innerHTML = '';
 }
 
 function showError(msg) {
