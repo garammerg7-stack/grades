@@ -329,7 +329,6 @@ function switchRole(role) {
         usernameLabel.textContent = 'البريد الإلكتروني';
         usernameInput.placeholder = 'example@mail.com';
         usernameInput.type = 'email';
-        loginCourseGroup.style.display = 'none';
         passwordGroup.style.display = 'block';
         passwordLabel.textContent = 'كلمة المرور';
         passwordInput.placeholder = '••••••••';
