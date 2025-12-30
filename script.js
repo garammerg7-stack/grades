@@ -220,6 +220,47 @@ async function resetAllCoursePasswords() {
     }
 }
 
+async function setAllCoursePasswordsToValue() {
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+    if (!course || !course.students.length) {
+        alert('لا يوجد طلاب في هذا المقرر.');
+        return;
+    }
+
+    const newPass = prompt(`أدخل كلمة المرور الجديدة لجميع طلاب مقرر (${course.title}):`);
+    if (newPass === null) return; // Cancelled
+    if (newPass.trim() === '') {
+        alert('كلمة المرور لا يمكن أن تكون فارغة.');
+        return;
+    }
+
+    if (confirm(`هل أنت متأكد من تغيير كلمات مرور جميع طلاب مقرر (${course.title}) إلى "${newPass}"؟`)) {
+        const setBtn = document.getElementById('set-unified-btn');
+        if (setBtn) setBtn.disabled = true;
+        const originalText = setBtn ? setBtn.innerHTML : '';
+        if (setBtn) setBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحديث...';
+
+        try {
+            const batch = db.batch();
+            course.students.forEach(student => {
+                const ref = db.collection('student_passwords').doc(student.name.trim());
+                batch.set(ref, { password: newPass.trim() });
+            });
+            await batch.commit();
+            alert(`تم تعيين كلمة المرور بنجاح لجميع طلاب مقرر (${course.title}).`);
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء التحديث الجماعي.');
+        } finally {
+            if (setBtn) {
+                setBtn.disabled = false;
+                setBtn.innerHTML = originalText;
+            }
+        }
+    }
+}
+
 function loadDataFromLocalStorage() {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
