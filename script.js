@@ -192,9 +192,18 @@ async function resetStudentPassword(studentName) {
 async function resetAllCoursePasswords() {
     const courseKey = courseSelect.value;
     const course = COURSE_DATA[courseKey];
-    if (!course || !course.students.length) return;
 
-    if (confirm(`⚠️ تحذير: هل أنت متأكد من تصفير كلمات السر لجميع طلاب مقرر (${course.title})؟\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+    if (!course || !course.students.length) {
+        alert('⚠️ لا يوجد طلاب في هذا المقرر لتصفير كلمات مرورهم.');
+        return;
+    }
+
+    const confirmMsg = `⚠️ تحذير نهائي:\n\n` +
+        `هل أنت متأكد تماماً من تصفير كلمات السر لجميع طلاب مقرر (${course.title})؟\n` +
+        `سيتم حذف جميع كلمات المرور الحالية ولن يتمكن الطلاب من الدخول إلا بعد تعيين كلمة مرور جديدة.\n\n` +
+        `هل تريد الاستمرار؟`;
+
+    if (confirm(confirmMsg)) {
         const resetBulkBtn = document.getElementById('reset-bulk-btn');
         if (resetBulkBtn) resetBulkBtn.disabled = true;
         const originalText = resetBulkBtn ? resetBulkBtn.innerHTML : '';
@@ -463,6 +472,15 @@ async function processExcelFile(e, type) {
 
     const file = e.target.files[0];
     if (!file) return;
+
+    const confirmMsg = type === 'grades'
+        ? `هل أنت متأكد من رفع ملف الدرجات؟\nسيؤدي هذا لتحديث درجات الطلاب في المقرر الحالي.`
+        : `هل أنت متأكد من رفع ملف الحضور؟\nسيؤدي هذا لتحديث سجلات الحضور في المقرر الحالي.`;
+
+    if (!confirm(confirmMsg)) {
+        e.target.value = ''; // Reset input to allow re-selecting same file
+        return;
+    }
 
     const reader = new FileReader();
 
@@ -1037,12 +1055,20 @@ async function addNewCourseFromSettings() {
 }
 
 function toggleCourseVisibility(key) {
-    if (COURSE_DATA[key]) {
-        COURSE_DATA[key].hidden = !COURSE_DATA[key].hidden;
-        if (db) saveToFirestore(key);
-        else saveToLocalStorage();
-        populateCourseDropdown();
-        renderSettingsView(); // Refresh list
+    const course = COURSE_DATA[key];
+    if (course) {
+        const isCurrentlyHidden = course.hidden;
+        const confirmMsg = isCurrentlyHidden
+            ? `هل أنت متأكد من إظهار مقرر (${course.title})؟\nسيكون متاحاً للطلاب للبحث وتسجيل الدخول.`
+            : `هل أنت متأكد من إخفاء مقرر (${course.title})؟\nلن يتمكن الطلاب من رؤيته أو تسجيل الدخول إليه.`;
+
+        if (confirm(confirmMsg)) {
+            course.hidden = !course.hidden;
+            if (db) saveToFirestore(key);
+            else saveToLocalStorage();
+            populateCourseDropdown();
+            renderSettingsView(); // Refresh list
+        }
     }
 }
 
