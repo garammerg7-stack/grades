@@ -60,6 +60,8 @@ const gradesContainer = document.getElementById('grades-container');
 const attendanceContainer = document.getElementById('attendance-container');
 const attendanceHead = document.getElementById('attendance-head');
 const attendanceBody = document.getElementById('attendance-body');
+const statsContainer = document.getElementById('stats-container');
+const studentVisitsSpan = document.getElementById('student-visits-count');
 
 let isAuthenticated = false;
 let currentView = 'grades'; // 'grades' or 'attendance'
@@ -270,6 +272,39 @@ async function setAllCoursePasswordsToValue() {
     }
 }
 
+async function incrementStudentVisit() {
+    if (db) {
+        try {
+            const statsRef = db.collection('metadata').doc('stats');
+            await statsRef.set({
+                studentVisits: firebase.firestore.FieldValue.increment(1)
+            }, { merge: true });
+        } catch (e) {
+            console.error('Error incrementing visits:', e);
+        }
+    } else {
+        let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
+        stats.studentVisits++;
+        localStorage.setItem('portalStats', JSON.stringify(stats));
+    }
+}
+
+async function renderStatsView() {
+    if (db) {
+        try {
+            const doc = await db.collection('metadata').doc('stats').get();
+            if (doc.exists) {
+                studentVisitsSpan.textContent = doc.data().studentVisits || 0;
+            }
+        } catch (e) {
+            console.error('Error fetching stats:', e);
+        }
+    } else {
+        let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
+        studentVisitsSpan.textContent = stats.studentVisits;
+    }
+}
+
 function loadDataFromLocalStorage() {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
@@ -400,8 +435,8 @@ function switchRole(role) {
 // --- Navigation & Role Management ---
 
 function switchTab(tabId) {
-    // Security: Secondary check to prevent students from accessing settings
-    if (userRole !== 'teacher' && tabId === 'settings') {
+    // Security: Secondary check to prevent students from accessing settings/stats
+    if (userRole !== 'teacher' && (tabId === 'settings' || tabId === 'stats')) {
         alert('ليس لديك صلاحية للوصول إلى هذا القسم');
         return;
     }
@@ -413,7 +448,7 @@ function switchTab(tabId) {
     });
 
     // Robustly hide all views/modals first
-    const views = ['grades-container', 'attendance-container', 'settings-container'];
+    const views = ['grades-container', 'attendance-container', 'settings-container', 'stats-container'];
     views.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -437,7 +472,13 @@ function switchTab(tabId) {
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
+        currentView = 'settings';
         renderSettingsView();
+    } else if (tabId === 'stats') {
+        const el = document.getElementById('stats-container');
+        if (el) el.style.display = 'flex';
+        currentView = 'stats';
+        renderStatsView();
     }
 
     renderActionBar(tabId);
@@ -725,6 +766,10 @@ async function handleLogin(e) {
 
             // Default to the first course they are enrolled in
             courseSelect.value = studentCourses[0];
+
+            // Increment visit count for student
+            await incrementStudentVisit();
+
             showDashboard();
         }
     } catch (error) {
@@ -752,6 +797,7 @@ function showDashboard() {
 
     const navLinks = document.querySelector('.nav-links');
     let settingsBtn = document.getElementById('nav-settings-btn');
+    let statsBtn = document.getElementById('nav-stats-btn');
 
     populateCourseDropdown(); // Refresh dropdown for the current user (role check inside)
 
@@ -759,26 +805,41 @@ function showDashboard() {
         thControls.style.display = 'table-cell';
         currentUserSpan.nextElementSibling.textContent = 'مدرس المادة';
 
-        // If button was removed for a previous student session, restore it
-        if (!settingsBtn && navLinks) {
-            settingsBtn = document.createElement('button');
-            settingsBtn.className = 'nav-btn';
-            settingsBtn.id = 'nav-settings-btn';
-            settingsBtn.dataset.tab = 'settings';
-            settingsBtn.innerHTML = '<i class="fa-solid fa-gears"></i> الإدارة';
-            settingsBtn.addEventListener('click', () => switchTab('settings'));
-            navLinks.appendChild(settingsBtn);
+        // Re-create buttons if missing
+        if (navLinks) {
+            if (!statsBtn) {
+                statsBtn = document.createElement('button');
+                statsBtn.className = 'nav-btn';
+                statsBtn.id = 'nav-stats-btn';
+                statsBtn.dataset.tab = 'stats';
+                statsBtn.innerHTML = '<i class="fa-solid fa-chart-simple"></i> الإحصائيات';
+                statsBtn.addEventListener('click', () => switchTab('stats'));
+                // Insert before settings if possible
+                if (settingsBtn) navLinks.insertBefore(statsBtn, settingsBtn);
+                else navLinks.appendChild(statsBtn);
+            }
+            if (!settingsBtn) {
+                settingsBtn = document.createElement('button');
+                settingsBtn.className = 'nav-btn';
+                settingsBtn.id = 'nav-settings-btn';
+                settingsBtn.dataset.tab = 'settings';
+                settingsBtn.innerHTML = '<i class="fa-solid fa-gears"></i> الإدارة';
+                settingsBtn.addEventListener('click', () => switchTab('settings'));
+                navLinks.appendChild(settingsBtn);
+            }
         }
         if (settingsBtn) settingsBtn.style.display = 'flex';
+        if (statsBtn) statsBtn.style.display = 'flex';
     } else {
         thControls.style.display = 'none';
         currentUserSpan.nextElementSibling.textContent = 'طالب';
 
-        // Physically remove the administration button for students (Fatal Error prevention)
+        // Physically remove admin/stats buttons for students
         if (settingsBtn) settingsBtn.remove();
+        if (statsBtn) statsBtn.remove();
 
-        // Ensure student is not on settings tab
-        if (currentView === 'settings') switchTab('grades');
+        // Ensure student is not on restricted tabs
+        if (currentView === 'settings' || currentView === 'stats') switchTab('grades');
     }
 
     if (currentView === 'grades') renderTable(courseSelect.value);
