@@ -275,8 +275,8 @@ async function setAllCoursePasswordsToValue() {
 async function incrementStudentVisit() {
     if (db) {
         try {
-            const statsRef = db.collection('metadata').doc('stats');
-            // Using set with merge handles document creation automatically
+            // Use student_passwords collection as it usually has broader permissions
+            const statsRef = db.collection('student_passwords').doc('__STATS__');
             await statsRef.set({
                 studentVisits: firebase.firestore.FieldValue.increment(1),
                 lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
@@ -296,17 +296,24 @@ async function renderStatsView() {
     studentVisitsSpan.textContent = "..."; // Loading state
     if (db) {
         try {
-            const doc = await db.collection('metadata').doc('stats').get();
+            const doc = await db.collection('student_passwords').doc('__STATS__').get();
             if (doc.exists) {
                 const data = doc.data();
                 studentVisitsSpan.textContent = data.studentVisits || 0;
             } else {
                 studentVisitsSpan.textContent = 0;
-                console.log('Stats document does not exist yet.');
+                // Initialize if it doesn't exist
+                await incrementStudentVisit();
             }
         } catch (e) {
             console.error('Error fetching stats:', e);
-            studentVisitsSpan.textContent = "Error";
+            // More descriptive error for user (in console at least) or fallback
+            if (e.code === 'permission-denied') {
+                studentVisitsSpan.textContent = "Auth Error";
+                alert('خطأ في الصلاحيات: تأكد من قواعد الأمان (Firestore Rules).');
+            } else {
+                studentVisitsSpan.textContent = "Error";
+            }
         }
     } else {
         let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
