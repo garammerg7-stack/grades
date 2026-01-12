@@ -276,9 +276,12 @@ async function incrementStudentVisit() {
     if (db) {
         try {
             const statsRef = db.collection('metadata').doc('stats');
+            // Using set with merge handles document creation automatically
             await statsRef.set({
-                studentVisits: firebase.firestore.FieldValue.increment(1)
+                studentVisits: firebase.firestore.FieldValue.increment(1),
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
+            console.log('Student visit incremented successfully.');
         } catch (e) {
             console.error('Error incrementing visits:', e);
         }
@@ -290,14 +293,20 @@ async function incrementStudentVisit() {
 }
 
 async function renderStatsView() {
+    studentVisitsSpan.textContent = "..."; // Loading state
     if (db) {
         try {
             const doc = await db.collection('metadata').doc('stats').get();
             if (doc.exists) {
-                studentVisitsSpan.textContent = doc.data().studentVisits || 0;
+                const data = doc.data();
+                studentVisitsSpan.textContent = data.studentVisits || 0;
+            } else {
+                studentVisitsSpan.textContent = 0;
+                console.log('Stats document does not exist yet.');
             }
         } catch (e) {
             console.error('Error fetching stats:', e);
+            studentVisitsSpan.textContent = "Error";
         }
     } else {
         let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
@@ -756,6 +765,15 @@ async function handleLogin(e) {
                 if (password !== storedPass) {
                     showError('كلمة المرور غير صحيحة لهذا الاسم');
                     return;
+                }
+            }
+
+            // Authenticate anonymously for Firestore access
+            if (auth) {
+                try {
+                    await auth.signInAnonymously();
+                } catch (authError) {
+                    console.error('Anonymous auth failed:', authError);
                 }
             }
 
