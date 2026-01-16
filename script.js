@@ -273,51 +273,64 @@ async function setAllCoursePasswordsToValue() {
 }
 
 async function incrementStudentVisit() {
+    // Optimistically update local storage first for immediate feedback (though not shared)
+    let localStats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
+    localStats.studentVisits++;
+    localStorage.setItem('portalStats', JSON.stringify(localStats));
+
     if (db) {
         try {
-            // Use student_passwords collection as it usually has broader permissions
+            // Attempt cloud sync
             const statsRef = db.collection('student_passwords').doc('__STATS__');
             await statsRef.set({
                 studentVisits: firebase.firestore.FieldValue.increment(1),
                 lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            console.log('Student visit incremented successfully.');
+            console.log('Cloud visit incremented successfully.');
         } catch (e) {
-            console.error('Error incrementing visits:', e);
+            console.warn('Cloud increment failed (using local fallback):', e.code);
+            // Permissions error is expected if rules are strict, we just silently fail to cloud
         }
-    } else {
-        let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
-        stats.studentVisits++;
-        localStorage.setItem('portalStats', JSON.stringify(stats));
     }
 }
 
 async function renderStatsView() {
-    studentVisitsSpan.textContent = "..."; // Loading state
+    studentVisitsSpan.textContent = "...";
+
+    let cloudCount = null;
+    let errorOccurred = false;
+
     if (db) {
         try {
             const doc = await db.collection('student_passwords').doc('__STATS__').get();
             if (doc.exists) {
-                const data = doc.data();
-                studentVisitsSpan.textContent = data.studentVisits || 0;
+                cloudCount = doc.data().studentVisits;
             } else {
-                studentVisitsSpan.textContent = 0;
-                // Initialize if it doesn't exist
-                await incrementStudentVisit();
+                // If cloud doc doesn't exist, it might be 0
+                cloudCount = 0;
             }
         } catch (e) {
-            console.error('Error fetching stats:', e);
-            // More descriptive error for user (in console at least) or fallback
-            if (e.code === 'permission-denied') {
-                studentVisitsSpan.textContent = "Auth Error";
-                alert('خطأ في الصلاحيات: تأكد من قواعد الأمان (Firestore Rules).');
-            } else {
-                studentVisitsSpan.textContent = "Error";
-            }
+            console.warn('Cloud fetch failed:', e);
+            errorOccurred = true;
         }
+    }
+
+    // Decision Logic:
+    // 1. If we got a cloud count, show it (it's the source of truth).
+    // 2. If cloud failed (permissions/network), fallback to local storage count.
+    // 3. If local is empty, show 0.
+
+    if (cloudCount !== null) {
+        studentVisitsSpan.textContent = cloudCount;
     } else {
-        let stats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
-        studentVisitsSpan.textContent = stats.studentVisits;
+        // Fallback
+        let localStats = JSON.parse(localStorage.getItem('portalStats') || '{"studentVisits": 0}');
+        studentVisitsSpan.textContent = localStats.studentVisits;
+
+        if (errorOccurred) {
+            // Optional: Add a small visual indicator or log, but don't block the UI with "Error"
+            console.log("Displayed local stats due to cloud error.");
+        }
     }
 }
 
