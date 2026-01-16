@@ -487,6 +487,12 @@ function switchTab(tabId) {
     const modal = document.getElementById('course-modal');
     if (modal) modal.style.display = 'none';
 
+    // Toggle Course Controls (Hide in Stats, show elsewhere)
+    const courseControls = document.querySelector('.course-controls');
+    if (courseControls) {
+        courseControls.style.display = (tabId === 'stats') ? 'none' : 'block';
+    }
+
     // Show active view
     if (tabId === 'grades') {
         const el = document.getElementById('grades-container');
