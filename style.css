@@ -823,6 +823,75 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
+
+/* Student Announcement Bar */
+#student-announcements-bar {
+    display: none;
+    /* Controlled by JS */
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-direction: column;
+}
+
+.student-ann-item {
+    display: flex;
+    align-items: center;
+    background: rgba(59, 130, 246, 0.1);
+    /* Default info blue tint */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 1rem;
+    border-radius: 12px;
+    gap: 1rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.student-ann-item.alert {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.student-ann-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.student-ann-item.alert .student-ann-icon {
+    color: #ef4444;
+}
+
+.student-ann-item.info .student-ann-icon {
+    color: #3b82f6;
+}
+
+.student-ann-content {
+    flex: 1;
+}
+
+.student-ann-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.student-ann-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.student-ann-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    white-space: nowrap;
+    margin-right: auto;
+    /* Push to far left in RTL */
+    padding-left: 1rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Add Announcement Form */
 .add-ann-form {
     background: rgba(255, 255, 255, 0.05);

@@ -986,6 +986,13 @@ function renderTable(courseKey) {
         `;
         tableBody.appendChild(tr);
     });
+
+    // Update Announcement Bar for Students
+    if (userRole === 'student') renderStudentAnnouncementsBar(courseKey);
+    else {
+        const bar = document.getElementById('student-announcements-bar');
+        if (bar) bar.style.display = 'none';
+    }
 }
 
 function renderAttendanceTable(courseKey) {
@@ -1048,6 +1055,13 @@ function renderAttendanceTable(courseKey) {
         tr.innerHTML = cells;
         attendanceBody.appendChild(tr);
     });
+
+    // Update Announcement Bar for Students
+    if (userRole === 'student') renderStudentAnnouncementsBar(courseKey);
+    else {
+        const bar = document.getElementById('student-announcements-bar');
+        if (bar) bar.style.display = 'none';
+    }
 }
 
 function shareGrade(name, cw, final, total) {
@@ -1399,6 +1413,60 @@ async function deleteAnnouncement(annId) {
             console.error('Error deleting announcement:', e);
         }
     }
+}
+
+    }
+}
+
+function renderStudentAnnouncementsBar(courseKey) {
+    const bar = document.getElementById('student-announcements-bar');
+    if (!bar) return;
+
+    // Only for students
+    if (userRole !== 'student') {
+        bar.style.display = 'none';
+        return;
+    }
+
+    // Hide if in full announcements view (optional, but cleaner)
+    if (currentView === 'announcements') {
+        bar.style.display = 'none';
+        return;
+    }
+
+    const course = COURSE_DATA[courseKey];
+    if (!course || !course.announcements || course.announcements.length === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    // Get last 2
+    const sortedList = [...course.announcements].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recent = sortedList.slice(0, 2);
+
+    if (recent.length === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    bar.innerHTML = recent.map(ann => {
+        const isAlert = ann.type === 'alert';
+        const icon = isAlert ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-circle-info"></i>';
+        const typeClass = isAlert ? 'alert' : 'info';
+
+        return `
+            <div class="student-ann-item ${typeClass}">
+                <div class="student-ann-icon">${icon}</div>
+                <div class="student-ann-content">
+                    <span class="student-ann-title">${ann.title}</span>
+                    <span class="student-ann-text">${ann.content}</span>
+                </div>
+                <span class="student-ann-date">${new Date(ann.date).toLocaleDateString('ar-SA')}</span>
+            </div>
+        `;
+    }).join('');
+
+    bar.style.display = 'flex';
 }
 
 init();
