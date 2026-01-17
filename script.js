@@ -96,7 +96,8 @@ async function init() {
     loginForm.addEventListener('submit', handleLogin);
     courseSelect.addEventListener('change', (e) => {
         if (currentView === 'grades') renderTable(e.target.value);
-        else renderAttendanceTable(e.target.value);
+        else if (currentView === 'attendance') renderAttendanceTable(e.target.value);
+        else if (currentView === 'announcements') renderAnnouncements(e.target.value);
     });
 
     // Student search now searches across all courses
@@ -1150,7 +1151,8 @@ async function addNewCourseFromSettings() {
     COURSE_DATA[newKey] = {
         title: courseName,
         students: [],
-        attendance: [], // Essential fix: missing field
+        attendance: [],
+        announcements: [],
         hidden: false
     };
 
@@ -1205,7 +1207,8 @@ function renderAnnouncements(courseKey) {
     let html = `
         <div id="ann-form-container" style="display: none;">
             <div class="add-ann-form">
-                <h3>إضافة إعلان جديد</h3>
+                <h3 id="ann-form-title">إضافة إعلان جديد</h3>
+                <input type="hidden" id="ann-edit-id" value="">
                 <div class="form-row">
                     <div class="form-group">
                         <label>عنوان الإعلان</label>
@@ -1224,7 +1227,7 @@ function renderAnnouncements(courseKey) {
                     <textarea id="ann-content-input" placeholder="اكتب تفاصيل الإعلان هنا..."></textarea>
                 </div>
                 <div style="margin-top: 1rem; display: flex; gap: 10px;">
-                    <button onclick="saveNewAnnouncement()" class="btn-primary" style="width: auto;">نشر الإعلان</button>
+                    <button onclick="saveNewAnnouncement()" class="btn-primary" style="width: auto;">حفظ الإعلان</button>
                     <button onclick="cancelAddAnnouncement()" class="logout-btn" style="background: rgba(255,255,255,0.05);">إلغاء</button>
                 </div>
             </div>
@@ -1255,6 +1258,9 @@ function generateAnnouncementCards(list) {
         if (userRole === 'teacher') {
             actionsHtml = `
                 <div class="ann-actions">
+                    <button class="ann-btn edit" onclick="editAnnouncement('${ann.id}')" title="تعديل">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
                     <button class="ann-btn delete" onclick="deleteAnnouncement('${ann.id}')" title="حذف">
                         <i class="fa-solid fa-trash"></i>
                     </button>
@@ -1282,9 +1288,36 @@ function formatContent(text) {
 function showAddAnnouncementForm() {
     const form = document.getElementById('ann-form-container');
     if (form) {
+        // Reset form for "New" mode
+        document.getElementById('ann-form-title').textContent = 'إضافة إعلان جديد';
+        document.getElementById('ann-edit-id').value = '';
+        document.getElementById('ann-title-input').value = '';
+        document.getElementById('ann-content-input').value = '';
+        document.getElementById('ann-type-input').value = 'info';
+
         form.style.display = 'block';
+        // Hide grid while editing/adding? No, better to keep it visible but maybe scroll to form
+        // document.getElementById('ann-grid').style.display = 'none'; 
+        // Just scroll top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+}
+
+function editAnnouncement(annId) {
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+    const ann = course.announcements.find(a => a.id === annId);
+
+    if (!ann) return;
+
+    showAddAnnouncementForm(); // Open the form first
+
+    // Populate with data
+    document.getElementById('ann-form-title').textContent = 'تعديل الإعلان';
+    document.getElementById('ann-edit-id').value = ann.id;
+    document.getElementById('ann-title-input').value = ann.title;
+    document.getElementById('ann-content-input').value = ann.content;
+    document.getElementById('ann-type-input').value = ann.type;
 }
 
 function cancelAddAnnouncement() {
@@ -1296,6 +1329,8 @@ async function saveNewAnnouncement() {
     const title = document.getElementById('ann-title-input').value.trim();
     const content = document.getElementById('ann-content-input').value.trim();
     const type = document.getElementById('ann-type-input').value;
+    const editId = document.getElementById('ann-edit-id').value;
+
     const courseKey = courseSelect.value;
     const course = COURSE_DATA[courseKey];
 
@@ -1304,16 +1339,34 @@ async function saveNewAnnouncement() {
         return;
     }
 
-    const newAnn = {
-        id: Date.now().toString(),
-        title,
-        content,
-        type,
-        date: new Date().toISOString()
-    };
-
     if (!course.announcements) course.announcements = [];
-    course.announcements.push(newAnn);
+
+    if (editId) {
+        // Update existing
+        const index = course.announcements.findIndex(a => a.id === editId);
+        if (index !== -1) {
+            course.announcements[index] = {
+                ...course.announcements[index],
+                title,
+                content,
+                type,
+                // Optional: Update date or keep original? Usually keep original creation date OR add updated date.
+                // For simplicity, let's keep original date unless user explicitly wants to "bump" it.
+                // Let's NOT update date to preserve history, or maybe update it?
+                // Use case: fixing a typo shouldn't change the date.
+            };
+        }
+    } else {
+        // Create new
+        const newAnn = {
+            id: Date.now().toString(),
+            title,
+            content,
+            type,
+            date: new Date().toISOString()
+        };
+        course.announcements.push(newAnn);
+    }
 
     try {
         if (db) await saveToFirestore(courseKey);
@@ -1321,7 +1374,8 @@ async function saveNewAnnouncement() {
 
         // Refresh View
         renderAnnouncements(courseKey);
-        // alert('تم نشر الإعلان بنجاح'); // Optional: Too many alerts can be annoying
+        // Close form
+        cancelAddAnnouncement();
     } catch (e) {
         console.error('Error saving announcement:', e);
         alert('حدث خطأ أثناء الحفظ');
