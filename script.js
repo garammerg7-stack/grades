@@ -1415,9 +1415,6 @@ async function deleteAnnouncement(annId) {
     }
 }
 
-    }
-}
-
 function renderStudentAnnouncementsBar(courseKey) {
     const bar = document.getElementById('student-announcements-bar');
     if (!bar) return;
