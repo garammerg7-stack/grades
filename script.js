@@ -1,9 +1,9 @@
 // Mock Data mimicking Excel files (Initial load only if Firestore is empty)
 let COURSE_DATA = {
-    "arch": { title: "معمارية حاسوب", students: [], attendance: [], hidden: false },
-    "fund": { title: "أساسيات حاسوب", students: [], attendance: [], hidden: false },
-    "comm": { title: "مبادئ اتصالات", students: [], attendance: [], hidden: false },
-    "digit": { title: "إلكترونيات رقمية", students: [], attendance: [], hidden: false }
+    "arch": { title: "معمارية حاسوب", students: [], attendance: [], announcements: [], hidden: false },
+    "fund": { title: "أساسيات حاسوب", students: [], attendance: [], announcements: [], hidden: false },
+    "comm": { title: "مبادئ اتصالات", students: [], attendance: [], announcements: [], hidden: false },
+    "digit": { title: "إلكترونيات رقمية", students: [], attendance: [], announcements: [], hidden: false }
 };
 
 // --- Firebase Configuration ---
@@ -477,7 +477,7 @@ function switchTab(tabId) {
     });
 
     // Robustly hide all views/modals first
-    const views = ['grades-container', 'attendance-container', 'settings-container', 'stats-container'];
+    const views = ['grades-container', 'attendance-container', 'announcements-container', 'settings-container', 'stats-container'];
     views.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -504,6 +504,11 @@ function switchTab(tabId) {
         if (el) el.style.display = 'block';
         currentView = 'attendance';
         renderAttendanceTable(courseSelect.value);
+    } else if (tabId === 'announcements') {
+        const el = document.getElementById('announcements-container');
+        if (el) el.style.display = 'block'; // using block for grid container, grid defined in CSS
+        currentView = 'announcements';
+        renderAnnouncements(courseSelect.value);
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
@@ -537,6 +542,12 @@ function renderActionBar(tabId) {
             <label for="attendance-upload" class="upload-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
                 <i class="fa-solid fa-calendar-days"></i> رفع حضور
             </label>
+        `;
+    } else if (tabId === 'announcements') {
+        bar.innerHTML = `
+            <button onclick="showAddAnnouncementForm()" class="upload-btn" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <i class="fa-solid fa-bullhorn"></i> إضافة إعلان
+            </button>
         `;
     } else if (tabId === 'settings') {
         bar.innerHTML = ''; // No action buttons for Settings
@@ -1181,4 +1192,159 @@ function toggleCourseVisibility(key) {
 // --- Printing System ---
 
 // --- Final Initialization ---
+// --- Announcements Logic ---
+
+function renderAnnouncements(courseKey) {
+    const container = document.getElementById('announcements-container');
+    const course = COURSE_DATA[courseKey];
+
+    // Ensure announcements array exists
+    if (!course.announcements) course.announcements = [];
+
+    // Header / Form Container
+    let html = `
+        <div id="ann-form-container" style="display: none;">
+            <div class="add-ann-form">
+                <h3>إضافة إعلان جديد</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>عنوان الإعلان</label>
+                        <input type="text" id="ann-title-input" placeholder="مثال: موعد اختبار المنتصف">
+                    </div>
+                     <div class="form-group" style="flex: 0 0 150px;">
+                        <label>النوع</label>
+                        <select id="ann-type-input">
+                            <option value="info">معلومة عامة ℹ️</option>
+                            <option value="alert">تنبيه هام ⚠️</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>نص الإعلان</label>
+                    <textarea id="ann-content-input" placeholder="اكتب تفاصيل الإعلان هنا..."></textarea>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                    <button onclick="saveNewAnnouncement()" class="btn-primary" style="width: auto;">نشر الإعلان</button>
+                    <button onclick="cancelAddAnnouncement()" class="logout-btn" style="background: rgba(255,255,255,0.05);">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Grid Container
+    html += '<div class="announcements-grid" id="ann-grid">';
+    html += generateAnnouncementCards(course.announcements);
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function generateAnnouncementCards(list) {
+    if (!list || list.length === 0) {
+        return `<p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); margin-top: 2rem;">لا توجد إعلانات حالياً في هذا المقرر.</p>`;
+    }
+
+    // Sort by date (newest first)
+    const sortedList = [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return sortedList.map(ann => {
+        const isAlert = ann.type === 'alert';
+        const typeClass = isAlert ? 'type-alert' : 'type-info';
+
+        let actionsHtml = '';
+        if (userRole === 'teacher') {
+            actionsHtml = `
+                <div class="ann-actions">
+                    <button class="ann-btn delete" onclick="deleteAnnouncement('${ann.id}')" title="حذف">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="announcement-card ${typeClass}">
+                <div class="ann-header">
+                    <h4 class="ann-title">${ann.title}</h4>
+                    <span class="ann-date">${new Date(ann.date).toLocaleDateString('ar-SA')}</span>
+                </div>
+                <div class="ann-content">${formatContent(ann.content)}</div>
+                ${actionsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+function formatContent(text) {
+    return text ? text.replace(/\n/g, '<br>') : '';
+}
+
+function showAddAnnouncementForm() {
+    const form = document.getElementById('ann-form-container');
+    if (form) {
+        form.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function cancelAddAnnouncement() {
+    const form = document.getElementById('ann-form-container');
+    if (form) form.style.display = 'none';
+}
+
+async function saveNewAnnouncement() {
+    const title = document.getElementById('ann-title-input').value.trim();
+    const content = document.getElementById('ann-content-input').value.trim();
+    const type = document.getElementById('ann-type-input').value;
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+
+    if (!title || !content) {
+        alert('يرجى تعبئة العنوان ونص الإعلان');
+        return;
+    }
+
+    const newAnn = {
+        id: Date.now().toString(),
+        title,
+        content,
+        type,
+        date: new Date().toISOString()
+    };
+
+    if (!course.announcements) course.announcements = [];
+    course.announcements.push(newAnn);
+
+    try {
+        if (db) await saveToFirestore(courseKey);
+        else saveToLocalStorage();
+
+        // Refresh View
+        renderAnnouncements(courseKey);
+        // alert('تم نشر الإعلان بنجاح'); // Optional: Too many alerts can be annoying
+    } catch (e) {
+        console.error('Error saving announcement:', e);
+        alert('حدث خطأ أثناء الحفظ');
+    }
+}
+
+async function deleteAnnouncement(annId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الإعلان؟')) return;
+
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+
+    if (course.announcements) {
+        course.announcements = course.announcements.filter(a => a.id !== annId);
+
+        try {
+            if (db) await saveToFirestore(courseKey);
+            else saveToLocalStorage();
+            renderAnnouncements(courseKey);
+        } catch (e) {
+            console.error('Error deleting announcement:', e);
+        }
+    }
+}
+
 init();
