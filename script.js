@@ -130,6 +130,10 @@ async function init() {
     // Sync UI with initial role
     switchRole(userRole);
     switchTab('grades'); // Force initial tab load
+
+    // Load Theme
+    const savedTheme = localStorage.getItem('portalTheme') || 'original';
+    setTheme(savedTheme);
 }
 
 async function fetchFromFirestore() {
@@ -353,6 +357,21 @@ function saveToLocalStorage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(COURSE_DATA));
 }
 
+function setTheme(theme) {
+    document.body.dataset.theme = theme;
+    localStorage.setItem('portalTheme', theme);
+
+    // Update button states
+    const btns = document.querySelectorAll('.theme-opt-btn');
+    btns.forEach(btn => {
+        if (btn.classList.contains(`theme-${theme}`)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
 async function populateStudentNames() {
     // We strictly keep it empty now to prevent showing all names on focus
     studentNamesDatalist.innerHTML = '';
@@ -520,6 +539,11 @@ function switchTab(tabId) {
         if (el) el.style.display = 'flex';
         currentView = 'stats';
         renderStatsView();
+    }
+
+    // Always refresh student bar visibility on tab switch
+    if (userRole === 'student') {
+        renderStudentAnnouncementsBar(courseSelect.value);
     }
 
     renderActionBar(tabId);
@@ -1264,7 +1288,16 @@ function generateAnnouncementCards(list) {
     // Sort by date (newest first)
     const sortedList = [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    return sortedList.map(ann => {
+    let displayList = sortedList;
+    // Deduplicate for students: The top 2 are already in the bar, so show the rest here
+    if (userRole === 'student') {
+        displayList = sortedList.slice(2);
+        if (displayList.length === 0) {
+            return `<p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); margin-top: 2rem;">الإعلانات الأحدث تظهر في الشريط أعلاه.</p>`;
+        }
+    }
+
+    return displayList.map(ann => {
         const isAlert = ann.type === 'alert';
         const typeClass = isAlert ? 'type-alert' : 'type-info';
 
@@ -1425,11 +1458,13 @@ function renderStudentAnnouncementsBar(courseKey) {
         return;
     }
 
-    // Hide if in full announcements view (optional, but cleaner)
+    // Allow bar in announcements view now, as we deduplicate the list
+    /*
     if (currentView === 'announcements') {
         bar.style.display = 'none';
         return;
     }
+    */
 
     const course = COURSE_DATA[courseKey];
     if (!course || !course.announcements || course.announcements.length === 0) {

@@ -13,6 +13,35 @@
     --error: #ef4444;
     --border-radius: 16px;
     --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+    /* New Consolidated Variables */
+    --primary: var(--primary-color);
+    --border: var(--glass-border);
+}
+
+body[data-theme="white"] {
+    --primary-color: #6366f1;
+    --secondary-color: #8b5cf6;
+    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --bg-secondary: #ffffff;
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(99, 102, 241, 0.15);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+body[data-theme="blue"] {
+    --primary-color: #38bdf8;
+    --secondary-color: #60a5fa;
+    --bg-main: #0c4a6e;
+    --bg-secondary: #082f49;
+    --bg-gradient: linear-gradient(135deg, #0c4a6e 0%, #082f49 100%);
+    --glass-bg: rgba(12, 74, 110, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --text-primary: #f0f9ff;
+    --text-secondary: #bae6fd;
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -114,10 +143,10 @@ input,
 select {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 8px;
-    color: white;
+    color: var(--text-primary);
     font-size: 1rem;
     transition: all 0.3s ease;
 }
@@ -131,9 +160,8 @@ select:focus {
 }
 
 option {
-    background-color: #0f172a;
-    /* Solid dark background for visibility */
-    color: white;
+    background-color: var(--bg-secondary, #0f172a);
+    color: var(--text-primary);
 }
 
 .btn-primary {
@@ -353,7 +381,7 @@ option {
     min-width: 200px;
     position: sticky;
     right: 0;
-    background: rgba(15, 23, 42, 0.95);
+    background: var(--bg-main, #0f172a);
     z-index: 5;
 }
 
@@ -395,7 +423,7 @@ table {
 thead {
     position: sticky;
     top: 0;
-    background: rgba(15, 23, 42, 0.95);
+    background: var(--bg-main, #0f172a);
     z-index: 10;
 }
 
