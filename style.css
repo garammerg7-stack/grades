@@ -23,17 +23,17 @@
     --border: var(--glass-border);
 }
 
-body[data-theme="white"] {
-    --primary-color: #6366f1;
-    --secondary-color: #8b5cf6;
-    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --bg-secondary: #ffffff;
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(99, 102, 241, 0.15);
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    --bg-main: #f8fafc;
+body[data-theme="grey"] {
+    --primary-color: #94a3b8;
+    --secondary-color: #64748b;
+    --bg-gradient: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+    --bg-secondary: #334155;
+    --bg-main: #1e293b;
+    --glass-bg: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
 body[data-theme="blue"] {
@@ -1003,8 +1003,8 @@ tbody tr:hover {
     background: linear-gradient(135deg, #0f172a, #4f46e5);
 }
 
-.theme-white {
-    background: linear-gradient(135deg, #f8fafc, #6366f1);
+.theme-grey {
+    background: linear-gradient(135deg, #475569, #94a3b8);
 }
 
 .theme-blue {
