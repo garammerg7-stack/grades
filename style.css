@@ -40,8 +40,8 @@ body[data-theme="blue"] {
     --primary-color: #3b82f6;
     --secondary-color: #93c5fd;
     --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    --bg-main: #f8fafc;
-    --bg-secondary: #ffffff;
+    --bg-main: #f0f9ff;
+    --bg-secondary: #e0f2fe;
     --glass-bg: rgba(255, 255, 255, 0.85);
     --glass-border: rgba(59, 130, 246, 0.2);
     --text-primary: #1e40af;
@@ -1080,7 +1080,7 @@ body[data-theme="blue"] .nav-btn.active {
 body[data-theme="blue"] input,
 body[data-theme="blue"] select,
 body[data-theme="blue"] textarea {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(59, 130, 246, 0.05);
     border-color: rgba(59, 130, 246, 0.1);
     color: var(--text-primary);
 }
