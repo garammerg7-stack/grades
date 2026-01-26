@@ -37,16 +37,16 @@ body[data-theme="grey"] {
 }
 
 body[data-theme="blue"] {
-    --primary-color: #38bdf8;
-    --secondary-color: #60a5fa;
-    --bg-main: #0c4a6e;
-    --bg-secondary: #082f49;
-    --bg-gradient: linear-gradient(135deg, #0c4a6e 0%, #082f49 100%);
-    --glass-bg: rgba(12, 74, 110, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.15);
-    --text-primary: #f0f9ff;
-    --text-secondary: #bae6fd;
-    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    --primary-color: #3b82f6;
+    --secondary-color: #93c5fd;
+    --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    --bg-main: #f8fafc;
+    --bg-secondary: #ffffff;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(59, 130, 246, 0.2);
+    --text-primary: #1e40af;
+    --text-secondary: #3b82f6;
+    --card-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
 }
 
 * {
@@ -1008,54 +1008,89 @@ tbody tr:hover {
 }
 
 .theme-blue {
-    background: linear-gradient(135deg, #0c4a6e, #38bdf8);
+    background: linear-gradient(135deg, #eff6ff, #3b82f6);
 }
 
 /* Theme specific overrides */
-body[data-theme="white"]::before {
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 60%),
-        radial-gradient(circle, rgba(139, 92, 246, 0.1) 100%, transparent 60%);
+/* Theme specific overrides */
+/* Grey Theme Overrides */
+body[data-theme="grey"]::before {
+    background: radial-gradient(circle, rgba(148, 163, 184, 0.1) 0%, transparent 60%),
+        radial-gradient(circle, rgba(100, 116, 139, 0.1) 100%, transparent 60%);
 }
 
-body[data-theme="white"] .nav-links,
-body[data-theme="white"] .course-controls,
-body[data-theme="white"] .view-switcher,
-body[data-theme="white"] .table-container,
-body[data-theme="white"] .settings-section,
-body[data-theme="white"] .login-tabs {
-    background: rgba(0, 0, 0, 0.05);
+body[data-theme="grey"] .nav-links,
+body[data-theme="grey"] .course-controls,
+body[data-theme="grey"] .view-switcher,
+body[data-theme="grey"] .table-container,
+body[data-theme="grey"] .settings-section,
+body[data-theme="grey"] .login-tabs {
+    background: rgba(0, 0, 0, 0.2);
 }
 
-body[data-theme="white"] .nav-btn:hover:not(.active) {
-    background: rgba(0, 0, 0, 0.05);
+body[data-theme="grey"] .nav-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
 }
 
-body[data-theme="white"] .nav-btn.active {
+body[data-theme="grey"] .nav-btn.active {
     background: var(--primary-color);
     color: white;
 }
 
-body[data-theme="white"] input,
-body[data-theme="white"] select,
-body[data-theme="white"] textarea {
-    background: rgba(0, 0, 0, 0.02);
-    border-color: rgba(0, 0, 0, 0.1);
+body[data-theme="grey"] input,
+body[data-theme="grey"] select,
+body[data-theme="grey"] textarea {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
 }
 
-body[data-theme="white"] .glass {
+body[data-theme="grey"] .glass {
     background: var(--glass-bg);
 }
 
-body[data-theme="white"] .avatar {
+body[data-theme="grey"] .avatar {
     color: white;
 }
 
-body[data-theme="white"] .logo-icon {
-    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* Blue Theme Overrides (Light Blue) */
+body[data-theme="blue"]::before {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 60%),
+        radial-gradient(circle, rgba(147, 197, 253, 0.1) 100%, transparent 60%);
+}
+
+body[data-theme="blue"] .nav-links,
+body[data-theme="blue"] .course-controls,
+body[data-theme="blue"] .view-switcher,
+body[data-theme="blue"] .table-container,
+body[data-theme="blue"] .settings-section,
+body[data-theme="blue"] .login-tabs {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body[data-theme="blue"] .nav-btn:hover:not(.active) {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+body[data-theme="blue"] .nav-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+body[data-theme="blue"] input,
+body[data-theme="blue"] select,
+body[data-theme="blue"] textarea {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(59, 130, 246, 0.1);
+    color: var(--text-primary);
+}
+
+body[data-theme="blue"] .glass {
+    background: var(--glass-bg);
+}
+
+body[data-theme="blue"] .avatar {
+    color: white;
 }
 
 /* Position switcher in dashboard */
