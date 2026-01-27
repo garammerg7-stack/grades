@@ -20,6 +20,7 @@ const firebaseConfig = {
 // Initialize Firebase (Compatibility Mode)
 let db;
 let auth;
+let storage;
 function initFirebase() {
     if (firebaseConfig.apiKey === "YOUR_API_KEY") {
         console.warn("Firebase not configured. Using LocalStorage fallback.");
@@ -28,6 +29,7 @@ function initFirebase() {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     auth = firebase.auth();
+    storage = firebase.storage();
     return true;
 }
 
@@ -113,6 +115,7 @@ async function init() {
     // Separate Listeners
     document.getElementById('grades-upload').addEventListener('change', (e) => processExcelFile(e, 'grades'));
     document.getElementById('attendance-upload').addEventListener('change', (e) => processExcelFile(e, 'attendance'));
+    document.getElementById('file-upload').addEventListener('change', handleFileUpload);
 
     // Nav Listeners
     const navBtns = document.querySelectorAll('.nav-btn');
@@ -529,6 +532,11 @@ function switchTab(tabId) {
         if (el) el.style.display = 'block'; // using block for grid container, grid defined in CSS
         currentView = 'announcements';
         renderAnnouncements(courseSelect.value);
+    } else if (tabId === 'files') {
+        const el = document.getElementById('files-container');
+        if (el) el.style.display = 'block';
+        currentView = 'files';
+        renderFiles(courseSelect.value);
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
@@ -572,6 +580,12 @@ function renderActionBar(tabId) {
         bar.innerHTML = `
             <button onclick="showAddAnnouncementForm()" class="upload-btn" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
                 <i class="fa-solid fa-bullhorn"></i> إضافة إعلان
+            </button>
+        `;
+    } else if (tabId === 'files') {
+        bar.innerHTML = `
+            <button onclick="document.getElementById('file-upload').click()" class="upload-btn" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف
             </button>
         `;
     } else if (tabId === 'settings') {
@@ -1499,6 +1513,145 @@ function renderStudentAnnouncementsBar(courseKey) {
     }).join('');
 
     bar.style.display = 'flex';
+}
+
+// --- Files Management Functions ---
+
+async function renderFiles(courseKey) {
+    const container = document.getElementById('files-container');
+    if (!container) return;
+
+    const course = COURSE_DATA[courseKey];
+    if (!course) return;
+
+    // Ensure files array exists
+    if (!course.files) course.files = [];
+
+    if (course.files.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <i class="fa-solid fa-folder-open" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+                <p>لا توجد ملفات مرفوعة لهذا المقرر بعد.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div class="files-grid">';
+    course.files.forEach((file, index) => {
+        const isLecture = file.name.toLowerCase().includes('محاضرة') || file.name.toLowerCase().includes('lecture');
+        const icon = isLecture ? 'fa-file-powerpoint' : 'fa-file-lines';
+
+        html += `
+            <div class="file-card">
+                <div class="file-icon">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="file-info">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-meta">${file.date || ''}</span>
+                </div>
+                <div class="file-actions">
+                    <a href="${file.url}" target="_blank" class="file-btn btn-download">
+                        <i class="fa-solid fa-download"></i> تحميل
+                    </a>
+                    ${userRole === 'teacher' ? `
+                        <button onclick="deleteFile('${courseKey}', ${index})" class="file-btn btn-delete">
+                            <i class="fa-solid fa-trash"></i> حذف
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function handleFileUpload(e) {
+    if (userRole !== 'teacher') return;
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const courseKey = courseSelect.value;
+    const course = COURSE_DATA[courseKey];
+
+    if (!confirm(`هل أنت متأكد من رفع الملف: ${file.name}؟`)) {
+        e.target.value = '';
+        return;
+    }
+
+    const uploadBtn = document.querySelector('#action-bar .upload-btn');
+    const originalText = uploadBtn ? uploadBtn.innerHTML : '';
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الرفع...';
+    }
+
+    try {
+        if (!storage) throw new Error('Firebase Storage is not initialized.');
+
+        const storageRef = storage.ref(`courses/${courseKey}/files/${Date.now()}_${file.name}`);
+        const snapshot = await storageRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+
+        if (!course.files) course.files = [];
+
+        const fileMetadata = {
+            name: file.name,
+            url: downloadURL,
+            path: snapshot.ref.fullPath,
+            size: file.size,
+            type: file.type,
+            date: new Date().toLocaleDateString('ar-EG')
+        };
+
+        course.files.push(fileMetadata);
+
+        if (db) await saveToFirestore(courseKey);
+        else saveToLocalStorage();
+
+        alert('تم رفع الملف بنجاح.');
+        renderFiles(courseKey);
+    } catch (error) {
+        console.error('File upload failed:', error);
+        alert('حدث خطأ أثناء رفع الملف: ' + error.message);
+    } finally {
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalText;
+        }
+        e.target.value = '';
+    }
+}
+
+async function deleteFile(courseKey, index) {
+    if (userRole !== 'teacher') return;
+
+    const course = COURSE_DATA[courseKey];
+    if (!course || !course.files || !course.files[index]) return;
+
+    const file = course.files[index];
+
+    if (!confirm(`هل أنت متأكد من حذف الملف: ${file.name}؟`)) return;
+
+    try {
+        if (file.path && storage) {
+            await storage.ref(file.path).delete();
+        }
+
+        course.files.splice(index, 1);
+
+        if (db) await saveToFirestore(courseKey);
+        else saveToLocalStorage();
+
+        alert('تم حذف الملف بنجاح.');
+        renderFiles(courseKey);
+    } catch (error) {
+        console.error('File deletion failed:', error);
+        alert('حدث خطأ أثناء حذف الملف.');
+    }
 }
 
 init();
