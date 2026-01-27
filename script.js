@@ -1590,10 +1590,19 @@ async function handleFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Check file size (optional, e.g., limit to 20MB)
+    const MAX_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        alert("الملف كبير جداً. الحد الأقصى هو 20 ميجابايت.");
+        e.target.value = '';
+        return;
+    }
+
     const courseKey = courseSelect.value;
     const course = COURSE_DATA[courseKey];
 
-    const res = prompt("اختر نوع الملف لرفعه:\n1 - محاضرة\n2 - واجب\nأو اكتب الرقم المقابل...");
+    const typeMsg = "اختر نوع الملف لرفعه:\n1 - محاضرة\n2 - واجب\nأدخل الرقم المقابل:";
+    const res = prompt(typeMsg);
 
     let category = '';
     if (res === '1') category = 'lecture';
@@ -1604,52 +1613,108 @@ async function handleFileUpload(e) {
         return;
     }
 
-    if (!confirm(`هل أنت متأكد من رفع الملف (${res === '1' ? 'محاضرة' : 'واجب'}): ${file.name}؟`)) {
+    if (!confirm(`هل أنت متأكد من رفع الملف (${category === 'lecture' ? 'محاضرة' : 'واجب'}): ${file.name}؟`)) {
         e.target.value = '';
         return;
     }
 
     const uploadBtn = document.querySelector('#action-bar .upload-btn');
     const originalText = uploadBtn ? uploadBtn.innerHTML : '';
+
     if (uploadBtn) {
         uploadBtn.disabled = true;
-        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الرفع...';
+        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري البدء...';
     }
 
     try {
-        if (!storage) throw new Error('Firebase Storage is not initialized.');
+        if (!storage) {
+            // Try to re-initialize if somehow missed
+            if (typeof firebase !== 'undefined' && firebase.storage) {
+                storage = firebase.storage();
+            } else {
+                throw new Error('Firebase Storage SDK غير محمل أو غير مفعل.');
+            }
+        }
 
-        const storageRef = storage.ref(`courses/${courseKey}/files/${Date.now()}_${file.name}`);
-        const snapshot = await storageRef.put(file);
-        const downloadURL = await snapshot.ref.getDownloadURL();
+        // Create a safe file name
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `courses/${courseKey}/files/${timestamp}_${safeName}`;
+        const storageRef = storage.ref(filePath);
 
-        if (!course.files) course.files = [];
+        // Use uploadTask for better control and monitoring
+        const uploadTask = storageRef.put(file);
 
-        const fileMetadata = {
-            name: file.name,
-            url: downloadURL,
-            path: snapshot.ref.fullPath,
-            size: file.size,
-            type: file.type,
-            category: category,
-            date: new Date().toLocaleDateString('ar-EG')
-        };
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                // Progress monitoring
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if (uploadBtn) {
+                    uploadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${Math.round(progress)}%`;
+                }
+            },
+            (error) => {
+                // Error handling
+                console.error('Upload Error Details:', error);
+                let msg = 'حدث خطأ أثناء الرفع: ';
+                switch (error.code) {
+                    case 'storage/unauthorized':
+                        msg += 'ليس لديك صلاحية للرفع. يرجى التأكد من إعدادات القواعد (Rules) في Firebase.';
+                        break;
+                    case 'storage/canceled':
+                        msg += 'تم إلغاء الرفع.';
+                        break;
+                    case 'storage/unknown':
+                        msg += 'خطأ غير معروف. تأكد من اتصال الإنترنت أو إعدادات Storage Bucket.';
+                        break;
+                    default:
+                        msg += error.message;
+                }
+                alert(msg);
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = originalText;
+                }
+            },
+            async () => {
+                // Success handling
+                const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
 
-        course.files.push(fileMetadata);
+                if (!course.files) course.files = [];
 
-        if (db) await saveToFirestore(courseKey);
-        else saveToLocalStorage();
+                const fileMetadata = {
+                    name: file.name,
+                    url: downloadURL,
+                    path: filePath,
+                    size: file.size,
+                    type: file.type,
+                    category: category,
+                    date: new Date().toLocaleDateString('ar-EG')
+                };
 
-        alert('تم رفع الملف بنجاح.');
-        renderFiles(courseKey);
+                course.files.push(fileMetadata);
+
+                if (db) await saveToFirestore(courseKey);
+                else saveToLocalStorage();
+
+                alert('تم رفع الملف بنجاح.');
+                renderFiles(courseKey);
+
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = originalText;
+                }
+            }
+        );
+
     } catch (error) {
-        console.error('File upload failed:', error);
-        alert('حدث خطأ أثناء رفع الملف: ' + error.message);
-    } finally {
+        console.error('File upload initialization failed:', error);
+        alert('حدث خطأ أثناء تهيئة عملية الرفع: ' + error.message);
         if (uploadBtn) {
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = originalText;
         }
+    } finally {
         e.target.value = '';
     }
 }
