@@ -500,7 +500,7 @@ function switchTab(tabId) {
     });
 
     // Robustly hide all views/modals first
-    const views = ['grades-container', 'attendance-container', 'announcements-container', 'settings-container', 'stats-container'];
+    const views = ['grades-container', 'attendance-container', 'files-container', 'announcements-container', 'settings-container', 'stats-container'];
     views.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -1524,47 +1524,63 @@ async function renderFiles(courseKey) {
     const course = COURSE_DATA[courseKey];
     if (!course) return;
 
-    // Ensure files array exists
     if (!course.files) course.files = [];
 
-    if (course.files.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                <i class="fa-solid fa-folder-open" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
-                <p>لا توجد ملفات مرفوعة لهذا المقرر بعد.</p>
-            </div>
-        `;
-        return;
-    }
+    const lectures = course.files.filter(f => f.category === 'lecture');
+    const assignments = course.files.filter(f => f.category === 'assignment');
 
-    let html = '<div class="files-grid">';
-    course.files.forEach((file, index) => {
-        const isLecture = file.name.toLowerCase().includes('محاضرة') || file.name.toLowerCase().includes('lecture');
-        const icon = isLecture ? 'fa-file-powerpoint' : 'fa-file-lines';
+    let html = '';
 
-        html += `
-            <div class="file-card">
-                <div class="file-icon">
-                    <i class="fa-solid ${icon}"></i>
-                </div>
-                <div class="file-info">
-                    <span class="file-name">${file.name}</span>
-                    <span class="file-meta">${file.date || ''}</span>
-                </div>
-                <div class="file-actions">
-                    <a href="${file.url}" target="_blank" class="file-btn btn-download">
-                        <i class="fa-solid fa-download"></i> تحميل
-                    </a>
-                    ${userRole === 'teacher' ? `
-                        <button onclick="deleteFile('${courseKey}', ${index})" class="file-btn btn-delete">
-                            <i class="fa-solid fa-trash"></i> حذف
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
+    const renderSection = (title, files, emptyMsg) => {
+        let sectionHtml = `
+            <div class="settings-section" style="margin-bottom: 2rem;">
+                <h3 style="border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+                    <i class="fa-solid ${title === 'المحاضرات' ? 'fa-book-open' : 'fa-file-signature'}"></i> ${title}
+                </h3>
         `;
-    });
-    html += '</div>';
+
+        if (files.length === 0) {
+            sectionHtml += `<p style="text-align: center; padding: 2rem; color: var(--text-secondary); opacity: 0.6;">${emptyMsg}</p>`;
+        } else {
+            sectionHtml += '<div class="files-grid">';
+            files.forEach((file) => {
+                const icon = file.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' :
+                    (file.name.toLowerCase().includes('ppt') ? 'fa-file-powerpoint' : 'fa-file-word');
+
+                // Find actual index in source array for deletion
+                const sourceIndex = course.files.indexOf(file);
+
+                sectionHtml += `
+                    <div class="file-card">
+                        <div class="file-icon">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">${file.name}</span>
+                            <span class="file-meta">${file.date || ''}</span>
+                        </div>
+                        <div class="file-actions">
+                            <a href="${file.url}" target="_blank" class="file-btn btn-download">
+                                <i class="fa-solid fa-download"></i> تحميل
+                            </a>
+                            ${userRole === 'teacher' ? `
+                                <button onclick="deleteFile('${courseKey}', ${sourceIndex})" class="file-btn btn-delete">
+                                    <i class="fa-solid fa-trash"></i> حذف
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            sectionHtml += '</div>';
+        }
+        sectionHtml += '</div>';
+        return sectionHtml;
+    };
+
+    html += renderSection('المحاضرات', lectures, 'لا توجد محاضرات مرفوعة بعد.');
+    html += renderSection('الواجبات', assignments, 'لا توجد واجبات مرفوعة بعد.');
+
     container.innerHTML = html;
 }
 
@@ -1577,7 +1593,18 @@ async function handleFileUpload(e) {
     const courseKey = courseSelect.value;
     const course = COURSE_DATA[courseKey];
 
-    if (!confirm(`هل أنت متأكد من رفع الملف: ${file.name}؟`)) {
+    const res = prompt("اختر نوع الملف لرفعه:\n1 - محاضرة\n2 - واجب\nأو اكتب الرقم المقابل...");
+
+    let category = '';
+    if (res === '1') category = 'lecture';
+    else if (res === '2') category = 'assignment';
+    else {
+        alert("إلغاء الرفع: يجب اختيار نوع صحيح (1 أو 2).");
+        e.target.value = '';
+        return;
+    }
+
+    if (!confirm(`هل أنت متأكد من رفع الملف (${res === '1' ? 'محاضرة' : 'واجب'}): ${file.name}؟`)) {
         e.target.value = '';
         return;
     }
@@ -1604,6 +1631,7 @@ async function handleFileUpload(e) {
             path: snapshot.ref.fullPath,
             size: file.size,
             type: file.type,
+            category: category,
             date: new Date().toLocaleDateString('ar-EG')
         };
 
