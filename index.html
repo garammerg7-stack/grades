@@ -77,11 +77,26 @@
     <section id="dashboard-section" class="glass">
         <!-- New Top Navigation -->
         <nav class="main-nav">
-            <div class="nav-brand">
-                <div class="avatar">T</div>
-                <div>
-                    <h3 id="current-user">Teacher</h3>
-                    <span id="user-role-badge">Admin</span>
+            <div class="header-top">
+                <div class="nav-brand">
+                    <div class="avatar">T</div>
+                    <div>
+                        <h3 id="current-user">Teacher</h3>
+                        <span id="user-role-badge">Admin</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <div class="theme-switcher-container">
+                        <button class="theme-opt-btn theme-original active" onclick="setTheme('original')"
+                            title="أصلي"></button>
+                        <button class="theme-opt-btn theme-grey" onclick="setTheme('grey')" title="رمادي"></button>
+                        <button class="theme-opt-btn theme-blue" onclick="setTheme('blue')" title="أزرق"></button>
+                    </div>
+
+                    <button id="logout-btn" class="logout-btn">
+                        <i class="fa-solid fa-right-from-bracket"></i> خروج
+                    </button>
                 </div>
             </div>
 
@@ -105,17 +120,6 @@
                     <i class="fa-solid fa-gears"></i> الإدارة
                 </button>
             </div>
-
-            <div class="theme-switcher-container">
-                <button class="theme-opt-btn theme-original active" onclick="setTheme('original')"
-                    title="أصلي"></button>
-                <button class="theme-opt-btn theme-grey" onclick="setTheme('grey')" title="رمادي"></button>
-                <button class="theme-opt-btn theme-blue" onclick="setTheme('blue')" title="أزرق"></button>
-            </div>
-
-            <button id="logout-btn" class="logout-btn">
-                <i class="fa-solid fa-right-from-bracket"></i> خروج
-            </button>
         </nav>
 
         <!-- Course Selector (Global) -->

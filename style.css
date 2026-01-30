@@ -219,12 +219,25 @@ option {
 /* Navigation Bar */
 .main-nav {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
     background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid var(--border);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
 }
 
 .nav-brand {
@@ -235,10 +248,11 @@ option {
 
 .nav-links {
     display: flex;
-    gap: 0.5rem;
+    gap: 1rem;
     background: rgba(0, 0, 0, 0.2);
-    padding: 5px;
+    padding: 8px;
     border-radius: 12px;
+    align-self: center;
 }
 
 .nav-btn {
