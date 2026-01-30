@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بوابة المدرس - رصد الدرجات</title>
-    <link rel="stylesheet" href="style.css?v=1.6">
+    <link rel="stylesheet" href="style.css?v=1.8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
@@ -95,6 +95,9 @@
                 <button class="nav-btn" data-tab="files">
                     <i class="fa-solid fa-folder-open"></i> الملفات
                 </button>
+                <button class="nav-btn" data-tab="exams">
+                    <i class="fa-solid fa-graduation-cap"></i> الامتحانات
+                </button>
                 <button class="nav-btn" data-tab="announcements">
                     <i class="fa-solid fa-bullhorn"></i> الإعلانات
                 </button>
@@ -171,6 +174,11 @@
 
         <!-- Files View -->
         <div id="files-container" class="settings-view" style="display: none;">
+            <!-- Injected by JS -->
+        </div>
+
+        <!-- Exams View -->
+        <div id="exams-container" class="settings-view" style="display: none;">
             <!-- Injected by JS -->
         </div>
 

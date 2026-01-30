@@ -500,7 +500,7 @@ function switchTab(tabId) {
     });
 
     // Robustly hide all views/modals first
-    const views = ['grades-container', 'attendance-container', 'files-container', 'announcements-container', 'settings-container', 'stats-container'];
+    const views = ['grades-container', 'attendance-container', 'files-container', 'exams-container', 'announcements-container', 'settings-container', 'stats-container'];
     views.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -537,6 +537,11 @@ function switchTab(tabId) {
         if (el) el.style.display = 'block';
         currentView = 'files';
         renderFiles(courseSelect.value);
+    } else if (tabId === 'exams') {
+        const el = document.getElementById('exams-container');
+        if (el) el.style.display = 'block';
+        currentView = 'exams';
+        renderExams(courseSelect.value);
     } else if (tabId === 'settings') {
         const el = document.getElementById('settings-container');
         if (el) el.style.display = 'flex';
@@ -586,6 +591,12 @@ function renderActionBar(tabId) {
         bar.innerHTML = `
             <button onclick="document.getElementById('file-upload').click()" class="upload-btn" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
                 <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف
+            </button>
+        `;
+    } else if (tabId === 'exams') {
+        bar.innerHTML = `
+            <button onclick="showExamCreator()" class="upload-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <i class="fa-solid fa-plus"></i> إنشاء امتحان تفاعلي
             </button>
         `;
     } else if (tabId === 'settings') {
@@ -1585,21 +1596,36 @@ async function renderFiles(courseKey) {
 }
 
 async function handleFileUpload(e) {
-    if (userRole !== 'teacher') return;
+    console.log("File selection event triggered.");
+    if (userRole !== 'teacher') {
+        console.warn("Upload aborted: User is not a teacher.");
+        return;
+    }
 
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+        console.log("No file selected.");
+        return;
+    }
 
-    // Check file size (optional, e.g., limit to 20MB)
-    const MAX_SIZE = 20 * 1024 * 1024;
+    console.log("File selected:", file.name, "Size:", file.size, "Type:", file.type);
+
+    const MAX_SIZE = 25 * 1024 * 1024; // 25MB
     if (file.size > MAX_SIZE) {
-        alert("الملف كبير جداً. الحد الأقصى هو 20 ميجابايت.");
+        alert("الملف كبير جداً. الحد الأقصى هو 25 ميجابايت.");
         e.target.value = '';
         return;
     }
 
     const courseKey = courseSelect.value;
     const course = COURSE_DATA[courseKey];
+    console.log("Target Course:", courseKey);
+
+    if (!courseKey) {
+        alert("يرجى اختيار مقرر أولاً.");
+        e.target.value = '';
+        return;
+    }
 
     const typeMsg = "اختر نوع الملف لرفعه:\n1 - محاضرة\n2 - واجب\nأدخل الرقم المقابل:";
     const res = prompt(typeMsg);
@@ -1623,52 +1649,46 @@ async function handleFileUpload(e) {
 
     if (uploadBtn) {
         uploadBtn.disabled = true;
-        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري البدء...';
+        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحضير...';
     }
 
     try {
+        console.log("Checking storage initialization...");
         if (!storage) {
-            // Try to re-initialize if somehow missed
-            if (typeof firebase !== 'undefined' && firebase.storage) {
-                storage = firebase.storage();
-            } else {
-                throw new Error('Firebase Storage SDK غير محمل أو غير مفعل.');
-            }
+            console.log("Storage not initialized, trying manually...");
+            storage = firebase.storage();
         }
 
-        // Create a safe file name
+        if (!storage) throw new Error('Firebase Storage could not be initialized.');
+
         const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `courses/${courseKey}/files/${timestamp}_${safeName}`;
+        console.log("Upload path:", filePath);
+
         const storageRef = storage.ref(filePath);
+        console.log("Storage reference created. Starting put(file)...");
 
         // Use uploadTask for better control and monitoring
         const uploadTask = storageRef.put(file);
 
         uploadTask.on('state_changed',
             (snapshot) => {
-                // Progress monitoring
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
                 if (uploadBtn) {
                     uploadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${Math.round(progress)}%`;
                 }
             },
             (error) => {
-                // Error handling
-                console.error('Upload Error Details:', error);
-                let msg = 'حدث خطأ أثناء الرفع: ';
-                switch (error.code) {
-                    case 'storage/unauthorized':
-                        msg += 'ليس لديك صلاحية للرفع. يرجى التأكد من إعدادات القواعد (Rules) في Firebase.';
-                        break;
-                    case 'storage/canceled':
-                        msg += 'تم إلغاء الرفع.';
-                        break;
-                    case 'storage/unknown':
-                        msg += 'خطأ غير معروف. تأكد من اتصال الإنترنت أو إعدادات Storage Bucket.';
-                        break;
-                    default:
-                        msg += error.message;
+                console.error("Firebase Storage Upload Error:", error);
+                let msg = 'فشل الرفع: ';
+                if (error.code === 'storage/unauthorized') {
+                    msg += 'لا تملك صلاحية الرفع. يرجى مراجعة القواعد (Rules) في متجر فيربيز لتسمح بالرفع.';
+                } else if (error.code === 'storage/retry-limit-exceeded') {
+                    msg += 'انتهى الوقت المسموح به للرفع. تأكد من جودة الاتصال.';
+                } else {
+                    msg += error.message;
                 }
                 alert(msg);
                 if (uploadBtn) {
@@ -1677,8 +1697,9 @@ async function handleFileUpload(e) {
                 }
             },
             async () => {
-                // Success handling
+                console.log("Upload task completed successfully.");
                 const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                console.log("Download URL obtained:", downloadURL);
 
                 if (!course.files) course.files = [];
 
@@ -1694,10 +1715,14 @@ async function handleFileUpload(e) {
 
                 course.files.push(fileMetadata);
 
-                if (db) await saveToFirestore(courseKey);
-                else saveToLocalStorage();
+                console.log("Saving metadata to database...");
+                if (db) {
+                    await saveToFirestore(courseKey);
+                } else {
+                    saveToLocalStorage();
+                }
 
-                alert('تم رفع الملف بنجاح.');
+                alert('تم رفع الملف بنجاح ✅');
                 renderFiles(courseKey);
 
                 if (uploadBtn) {
@@ -1708,8 +1733,8 @@ async function handleFileUpload(e) {
         );
 
     } catch (error) {
-        console.error('File upload initialization failed:', error);
-        alert('حدث خطأ أثناء تهيئة عملية الرفع: ' + error.message);
+        console.error('Fatal Upload Error:', error);
+        alert('حدث خطأ فادح أثناء تهيئة الرفع: ' + error.message);
         if (uploadBtn) {
             uploadBtn.disabled = false;
             uploadBtn.innerHTML = originalText;
@@ -1745,6 +1770,327 @@ async function deleteFile(courseKey, index) {
         console.error('File deletion failed:', error);
         alert('حدث خطأ أثناء حذف الملف.');
     }
+}
+
+// --- Interactive Exams Functions ---
+
+async function renderExams(courseKey) {
+    const container = document.getElementById('exams-container');
+    if (!container) return;
+
+    const course = COURSE_DATA[courseKey];
+    if (!course) return;
+
+    if (!course.exams) course.exams = [];
+
+    if (course.exams.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <i class="fa-solid fa-graduation-cap" style="font-size: 4rem; opacity: 0.2; margin-bottom: 1.5rem;"></i>
+                <p>لا توجد امتحانات تفاعلية متاحة لهذا المقرر حالياً.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div class="exam-grid">';
+    course.exams.forEach((exam, index) => {
+        html += `
+            <div class="exam-card" onclick="startExam('${courseKey}', ${index})">
+                <div class="exam-badge">20 سؤال</div>
+                <div class="exam-icon">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <div class="exam-name">${exam.title}</div>
+                <div style="text-align: center; font-size: 0.8rem; opacity: 0.6;">
+                    ${exam.createdAt || ''}
+                </div>
+                ${userRole === 'teacher' ? `
+                    <button onclick="event.stopPropagation(); deleteExam('${courseKey}', ${index})" 
+                            style="margin-top: 1rem; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer;">
+                        <i class="fa-solid fa-trash"></i> حذف الامتحان
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function showExamCreator() {
+    const container = document.getElementById('exams-container');
+    if (!container) return;
+
+    let html = `
+        <div class="exam-creator-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2><i class="fa-solid fa-magic-wand-sparkles"></i> إنشاء امتحان جديد</h2>
+                <button onclick="renderExams(courseSelect.value)" class="nav-btn" style="padding: 0.5rem 1rem;">إلغاء</button>
+            </div>
+            
+            <div class="settings-section">
+                <label>عنوان الامتحان (مثلاً: امتحان الشهر الأول)</label>
+                <input type="text" id="exam-title-input" placeholder="أدخل عنواناً جذاباً..." style="margin-bottom: 2rem;">
+                
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    <i class="fa-solid fa-circle-info"></i> الامتحان الموحد يحتوي على 20 سؤال (10 صح/خطأ و 10 اختيارات).
+                </p>
+
+                <div id="questions-inputs">
+    `;
+
+    // 10 True/False Questions
+    for (let i = 1; i <= 10; i++) {
+        html += `
+            <div class="question-input-card" data-type="tf">
+                <div class="question-header">السؤال ${i} (صح / خطأ)</div>
+                <textarea placeholder="اكتب نص السؤال هنا..." class="q-text"></textarea>
+                <div class="opt-grid">
+                    <label class="radio-label"><input type="radio" name="q${i}-ans" value="true"> صح</label>
+                    <label class="radio-label"><input type="radio" name="q${i}-ans" value="false"> خطأ</label>
+                </div>
+            </div>
+        `;
+    }
+
+    // 10 Multiple Choice Questions
+    for (let i = 11; i <= 20; i++) {
+        html += `
+            <div class="question-input-card" data-type="mc">
+                <div class="question-header">السؤال ${i} (اختيار من متعدد)</div>
+                <textarea placeholder="اكتب نص السؤال هنا..." class="q-text"></textarea>
+                <div class="opt-grid">
+                    <div class="opt-input">
+                        <input type="radio" name="q${i}-ans" value="0">
+                        <input type="text" placeholder="الخيار الأول" class="q-opt">
+                    </div>
+                    <div class="opt-input">
+                        <input type="radio" name="q${i}-ans" value="1">
+                        <input type="text" placeholder="الخيار الثاني" class="q-opt">
+                    </div>
+                    <div class="opt-input">
+                        <input type="radio" name="q${i}-ans" value="2">
+                        <input type="text" placeholder="الخيار الثالث" class="q-opt">
+                    </div>
+                    <div class="opt-input">
+                        <input type="radio" name="q${i}-ans" value="3">
+                        <input type="text" placeholder="الخيار الرابع" class="q-opt">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    html += `
+                </div>
+                <button onclick="saveNewExam()" class="upload-btn" style="width: 100%; margin-top: 2rem; background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ ونشر الامتحان
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+async function saveNewExam() {
+    const title = document.getElementById('exam-title-input').value;
+    if (!title) return alert("يرجى إدخال عنوان للامتحان.");
+
+    const questionCards = document.querySelectorAll('.question-input-card');
+    const questions = [];
+
+    for (let card of questionCards) {
+        const text = card.querySelector('.q-text').value;
+        const type = card.dataset.type;
+        const ansInput = card.querySelector('input[name="' + card.querySelector('input, textarea').name + '"]:checked');
+
+        if (!text) return alert("يرجى ملء جميع نصوص الأسئلة.");
+        if (!ansInput) return alert("يرجى تحديد الإجابة الصحيحة لكل سؤال.");
+
+        const qData = { text, type, correctAnswer: ansInput.value };
+
+        if (type === 'mc') {
+            const options = Array.from(card.querySelectorAll('.q-opt')).map(opt => opt.value);
+            if (options.some(o => !o)) return alert("يرجى ملء جميع خيارات السؤال المتعدد.");
+            qData.options = options;
+        }
+
+        questions.push(qData);
+    }
+
+    const courseKey = courseSelect.value;
+    const newExam = {
+        id: Date.now(),
+        title: title,
+        questions: questions,
+        createdAt: new Date().toLocaleDateString('ar-EG')
+    };
+
+    if (!COURSE_DATA[courseKey].exams) COURSE_DATA[courseKey].exams = [];
+    COURSE_DATA[courseKey].exams.push(newExam);
+
+    try {
+        if (db) await saveToFirestore(courseKey);
+        else saveToLocalStorage();
+        alert("تم حفظ الامتحان بنجاح ✅");
+        renderExams(courseKey);
+    } catch (e) {
+        alert("فشل الحفظ: " + e.message);
+    }
+}
+
+async function deleteExam(courseKey, index) {
+    if (!confirm("هل أنت متأكد من حذف هذا الامتحان؟")) return;
+    COURSE_DATA[courseKey].exams.splice(index, 1);
+    if (db) await saveToFirestore(courseKey);
+    else saveToLocalStorage();
+    renderExams(courseKey);
+}
+
+// --- Exam Player Logic ---
+
+let activeExam = null;
+let currentQuestionIndex = 0;
+let studentAnswers = [];
+
+function startExam(courseKey, examIndex) {
+    const exam = COURSE_DATA[courseKey].exams[examIndex];
+    if (!exam) return;
+
+    if (userRole === 'teacher') {
+        if (!confirm("أنت مسجل كمدرب. هل تريد معاينة الامتحان؟")) return;
+    }
+
+    activeExam = exam;
+    currentQuestionIndex = 0;
+    studentAnswers = new Array(exam.questions.length).fill(null);
+
+    renderPlayer();
+}
+
+function renderPlayer() {
+    const container = document.getElementById('exams-container');
+    if (!container || !activeExam) return;
+
+    const q = activeExam.questions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / activeExam.questions.length) * 100;
+
+    let html = `
+        <div class="exam-player">
+            <div class="player-header">
+                <h2>${activeExam.title}</h2>
+                <p>السؤال ${currentQuestionIndex + 1} من ${activeExam.questions.length}</p>
+            </div>
+            
+            <div class="player-progress">
+                <div class="progress-bar" style="width: ${progress}%"></div>
+            </div>
+
+            <div class="player-question-card">
+                <h3 style="line-height: 1.6;">${q.text}</h3>
+                <div class="player-options">
+    `;
+
+    if (q.type === 'tf') {
+        const options = [{ val: 'true', label: 'صح' }, { val: 'false', label: 'خطأ' }];
+        options.forEach(opt => {
+            const isSelected = studentAnswers[currentQuestionIndex] === opt.val;
+            html += `
+                <div class="player-option ${isSelected ? 'selected' : ''}" onclick="saveAnswer('${opt.val}')">
+                    ${opt.label}
+                </div>
+            `;
+        });
+    } else {
+        q.options.forEach((optText, i) => {
+            const isSelected = studentAnswers[currentQuestionIndex] === i.toString();
+            html += `
+                <div class="player-option ${isSelected ? 'selected' : ''}" onclick="saveAnswer('${i}')">
+                    <span style="width: 30px; height: 30px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">${String.fromCharCode(65 + i)}</span>
+                    ${optText}
+                </div>
+            `;
+        });
+    }
+
+    html += `
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <button onclick="prevQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''} class="nav-btn" style="padding: 0.8rem 1.5rem;">
+                    السابق
+                </button>
+                
+                ${currentQuestionIndex === activeExam.questions.length - 1 ? `
+                    <button onclick="finishExam()" class="upload-btn" style="background: linear-gradient(135deg, #10b981, #059669); padding: 0.8rem 2rem;">
+                        إنهاء الامتحان
+                    </button>
+                ` : `
+                    <button onclick="nextQuestion()" class="upload-btn" style="padding: 0.8rem 2rem;">
+                        التالي
+                    </button>
+                `}
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function saveAnswer(val) {
+    studentAnswers[currentQuestionIndex] = val;
+    renderPlayer();
+}
+
+function nextQuestion() {
+    if (studentAnswers[currentQuestionIndex] === null) return alert("يرجى اختيار إجابة للمتابعة.");
+    if (currentQuestionIndex < activeExam.questions.length - 1) {
+        currentQuestionIndex++;
+        renderPlayer();
+    }
+}
+
+function prevQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        renderPlayer();
+    }
+}
+
+function finishExam() {
+    if (studentAnswers[currentQuestionIndex] === null) return alert("يرجى اختيار إجابة للمتابعة.");
+    if (!confirm("هل أنت متأكد من إنهاء الامتحان وتسليمه؟")) return;
+
+    let score = 0;
+    activeExam.questions.forEach((q, i) => {
+        if (studentAnswers[i] === q.correctAnswer) score++;
+    });
+
+    const container = document.getElementById('exams-container');
+    container.innerHTML = `
+        <div class="results-screen">
+            <i class="fa-solid fa-trophy" style="font-size: 4rem; color: #fbbf24;"></i>
+            <h2 style="margin-top: 1.5rem;">انتهى الامتحان!</h2>
+            <p>لقد أتممت ${activeExam.title} بنجاح.</p>
+            
+            <div class="score-circle">
+                <span class="score-num">${score}</span>
+                <span class="score-total">من 20</span>
+            </div>
+
+            <p style="margin-bottom: 2rem; opacity: 0.8;">تم تسجيل درجتك في النظام.</p>
+            
+            <button onclick="renderExams(courseSelect.value)" class="upload-btn" style="padding: 1rem 3rem;">
+                العودة لقائمة الامتحانات
+            </button>
+        </div>
+    `;
+
+    // In a real system, we'd save this score to the student's record here.
+    console.log(`Student Score: ${score}/20`);
 }
 
 init();
