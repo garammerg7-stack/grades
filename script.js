@@ -137,6 +137,9 @@ async function init() {
     // Load Theme
     const savedTheme = localStorage.getItem('portalTheme') || 'original';
     setTheme(savedTheme);
+
+    // Initial config load
+    await loadAssistantConfig();
 }
 
 async function fetchFromFirestore() {
@@ -949,6 +952,8 @@ function showDashboard() {
 
     if (currentView === 'grades') renderTable(courseSelect.value);
     else renderAttendanceTable(courseSelect.value);
+
+    updateAIAssistantVisibility();
 }
 
 async function handleLogout() {
@@ -973,6 +978,8 @@ async function handleLogout() {
     // Clear sensitive data from view
     tableBody.innerHTML = '';
     attendanceBody.innerHTML = '';
+
+    updateAIAssistantVisibility();
 }
 
 function showError(msg) {
@@ -2091,6 +2098,223 @@ function finishExam() {
 
     // In a real system, we'd save this score to the student's record here.
     console.log(`Student Score: ${score}/20`);
+}
+
+// --- AI Assistant Logic ---
+let ASSISTANT_CONFIG = {
+    apiKey: '',
+    knowledgeBase: ''
+};
+
+async function saveAssistantConfig() {
+    const apiKey = document.getElementById('ai-api-key').value.trim();
+    const knowledgeBase = document.getElementById('ai-knowledge-base').value.trim();
+
+    if (!apiKey) {
+        alert('يرجى إدخال مفتاح الـ API');
+        return;
+    }
+
+    ASSISTANT_CONFIG.apiKey = apiKey;
+    ASSISTANT_CONFIG.knowledgeBase = knowledgeBase;
+
+    try {
+        if (db) {
+            await db.collection('settings').doc('assistant_config').set(ASSISTANT_CONFIG);
+            alert('تم حفظ إعدادات المساعد في السحابة بنجاح.');
+        } else {
+            localStorage.setItem('assistantConfig', JSON.stringify(ASSISTANT_CONFIG));
+            alert('تم حفظ الإعدادات محلياً.');
+        }
+    } catch (e) {
+        console.error('Error saving assistant config:', e);
+        alert('حدث خطأ أثناء حفظ الإعدادات.');
+    }
+}
+
+async function loadAssistantConfig() {
+    try {
+        if (db) {
+            const doc = await db.collection('settings').doc('assistant_config').get();
+            if (doc.exists) {
+                ASSISTANT_CONFIG = doc.data();
+                const apiKeyEl = document.getElementById('ai-api-key');
+                const kbEl = document.getElementById('ai-knowledge-base');
+                if (apiKeyEl) apiKeyEl.value = ASSISTANT_CONFIG.apiKey || '';
+                if (kbEl) kbEl.value = ASSISTANT_CONFIG.knowledgeBase || '';
+            }
+        } else {
+            const saved = localStorage.getItem('assistantConfig');
+            if (saved) {
+                ASSISTANT_CONFIG = JSON.parse(saved);
+                const apiKeyEl = document.getElementById('ai-api-key');
+                const kbEl = document.getElementById('ai-knowledge-base');
+                if (apiKeyEl) apiKeyEl.value = ASSISTANT_CONFIG.apiKey || '';
+                if (kbEl) kbEl.value = ASSISTANT_CONFIG.knowledgeBase || '';
+            }
+        }
+    } catch (e) {
+        console.error('Error loading assistant config:', e);
+    }
+}
+
+function renderSettingsView() {
+    loadAssistantConfig();
+}
+
+function toggleAIAssistant() {
+    const modal = document.getElementById('ai-modal');
+    const btn = document.getElementById('ai-btn');
+    if (modal.style.display === 'none') {
+        modal.style.display = 'flex';
+        btn.style.display = 'none';
+    } else {
+        modal.style.display = 'none';
+        btn.style.display = 'flex';
+    }
+}
+
+function updateAIAssistantVisibility() {
+    const btn = document.getElementById('ai-btn');
+    const modal = document.getElementById('ai-modal');
+    if (btn) btn.style.display = (isAuthenticated && userRole === 'student') ? 'flex' : 'none';
+    if (modal && (!isAuthenticated || userRole !== 'student')) modal.style.display = 'none';
+}
+
+let recognition;
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+        const query = event.results[0][0].transcript;
+        addAIMessage(query, 'user');
+        processAIQuery(query);
+    };
+
+    recognition.onstart = () => {
+        updateAIStatus('جاري الاستماع...', true);
+    };
+
+    recognition.onend = () => {
+        updateAIStatus('اضغط على الميكروفون للتحدث', false);
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        updateAIStatus('حدث خطأ في التعرف على الصوت', false);
+    };
+}
+
+function updateAIStatus(text, listening) {
+    const statusText = document.getElementById('ai-status-text');
+    const micBtn = document.getElementById('ai-mic-trigger');
+    const wave = document.getElementById('mic-wave');
+
+    if (statusText) statusText.textContent = text;
+    if (micBtn) micBtn.classList.toggle('listening', listening);
+    if (wave) wave.style.display = listening ? 'flex' : 'none';
+}
+
+function startVoiceInquiry() {
+    if (!recognition) {
+        alert('عذراً، متصفحك لا يدعم التعرف على الصوت');
+        return;
+    }
+    recognition.start();
+}
+
+function addAIMessage(text, sender) {
+    const container = document.getElementById('ai-convo-container');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `ai-message ${sender}`;
+    msgDiv.textContent = text;
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function processAIQuery(query) {
+    if (!ASSISTANT_CONFIG.apiKey) {
+        addAIMessage('يرجى تهيئة مفتاح الـ API في الإعدادات من قبل المدرس.', 'assistant');
+        return;
+    }
+
+    updateAIStatus('جاري التفكير...', false);
+
+    try {
+        // Collect Student Context
+        const studentData = Object.values(COURSE_DATA).map(course => {
+            const student = course.students.find(s => s.name.trim() === currentStudentName);
+            if (student) {
+                return {
+                    course: course.title,
+                    grades: {
+                        classwork: student.classwork,
+                        final: student.final,
+                        total: student.total
+                    },
+                    attendance: course.attendance.find(a => a.name.trim() === currentStudentName)?.sessions || []
+                };
+            }
+            return null;
+        }).filter(item => item !== null);
+
+        // Collect Announcements
+        const announcements = Object.values(COURSE_DATA)
+            .flatMap(c => c.announcements || [])
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 3);
+
+        const context = `
+            بيانات الطالب الحالية: ${JSON.stringify(studentData)}
+            آخر الإعلانات: ${JSON.stringify(announcements)}
+            صندوق المعرفة للمدرس: ${ASSISTANT_CONFIG.knowledgeBase}
+        `;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${ASSISTANT_CONFIG.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: `أنت مساعد تعليمي ذكي لموقع الأستاذ. أجب بذكاء وبناءً على السياق التالي فقط. 
+                        صغ الإجابة بأسلوب ودي وبليغ وباللغة العربية. لا تذكر أنك ذكاء اصطناعي إلا إذا سُئلت.
+                        لا تقم بتعديل أي بيانات. إذا لم تجد الإجابة في السياق، اعتذر بلباقة.
+                        
+                        السياق: ${context}
+                        
+                        سؤال الطالب: ${query}`
+                    }]
+                }]
+            })
+        });
+
+        const result = await response.json();
+        const aiText = result.candidates[0].content.parts[0].text;
+
+        addAIMessage(aiText, 'assistant');
+        speakResponse(aiText);
+    } catch (e) {
+        console.error('AI Processing error:', e);
+        addAIMessage('عذراً، حدث خطأ أثناء الاتصال بالمساعد الذكي.', 'assistant');
+    } finally {
+        updateAIStatus('اضغط على الميكروفون للتحدث', false);
+    }
+}
+
+function speakResponse(text) {
+    if ('speechSynthesis' in window) {
+        const synth = window.speechSynthesis;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ar-SA';
+        const voices = synth.getVoices();
+        const arVoice = voices.find(v => v.lang.includes('ar'));
+        if (arVoice) utter.voice = arVoice;
+        synth.speak(utter);
+    }
 }
 
 init();

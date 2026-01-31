@@ -211,6 +211,23 @@
             </div>
 
             <div class="settings-section">
+                <h3><i class="fa-solid fa-robot"></i> إعدادات المساعد الذكي</h3>
+                <div class="settings-info-card">
+                    <p>قم بتهيئة المساعد الصوتي عبر وضع مفتاح API وصندوق المعرفة.</p>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="ai-api-key">Gemini API Key:</label>
+                    <input type="password" id="ai-api-key" placeholder="أدخل مفتاح الـ API هنا..." style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="ai-knowledge-base">صندوق المعرفة (Knowledge Base):</label>
+                    <textarea id="ai-knowledge-base" placeholder="انسخ والصق جميع المعلومات والتوجيهات هنا..."
+                        style="width: 100%; min-height: 150px;"></textarea>
+                </div>
+                <button onclick="saveAssistantConfig()" class="btn-primary">حفظ إعدادات المساعد</button>
+            </div>
+
+            <div class="settings-section">
                 <h3><i class="fa-solid fa-layer-group"></i> إدارة المقررات</h3>
 
                 <div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
@@ -239,7 +256,32 @@
             </div>
         </div>
 
-        <!-- Manage Courses Modal -->
+        <!-- AI Assistant Floating Button -->
+        <button id="ai-btn" class="ai-fab" onclick="toggleAIAssistant()" style="display: none;">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+
+        <!-- AI Assistant Conversation Modal -->
+        <div id="ai-modal" class="ai-modal glass" style="display: none;">
+            <div class="ai-modal-header">
+                <h3><i class="fa-solid fa-robot"></i> المساعد الذكي</h3>
+                <button onclick="toggleAIAssistant()" class="close-btn">&times;</button>
+            </div>
+            <div id="ai-convo-container" class="ai-convo-container">
+                <div class="ai-message assistant">أهلاً بك! كيف يمكنني مساعدتك اليوم؟</div>
+            </div>
+            <div class="ai-status-bar" id="ai-status">
+                <span id="ai-status-text">اضغط على الميكروفون للتحدث</span>
+                <div class="mic-wave" id="mic-wave" style="display: none;">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="ai-modal-footer">
+                <button id="ai-mic-trigger" class="ai-mic-btn" onclick="startVoiceInquiry()">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+            </div>
+        </div>
     </section>
 
     <!-- Hidden Inputs for Uploads -->
