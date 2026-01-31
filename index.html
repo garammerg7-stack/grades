@@ -116,6 +116,9 @@
                 <button class="nav-btn" data-tab="announcements">
                     <i class="fa-solid fa-bullhorn"></i> الإعلانات
                 </button>
+                <button class="nav-btn" id="ai-nav-btn" onclick="toggleAIAssistant()" style="display: none;">
+                    <i class="fa-solid fa-robot"></i> المساعد الذكي
+                </button>
                 <button class="nav-btn" data-tab="settings" id="nav-settings-btn">
                     <i class="fa-solid fa-gears"></i> الإدارة
                 </button>
@@ -256,7 +259,7 @@
             </div>
         </div>
 
-        <!-- AI Assistant Floating Button -->
+        <!-- AI Assistant Floating Button (Hidden, replaced by nav button) -->
         <button id="ai-btn" class="ai-fab" onclick="toggleAIAssistant()" style="display: none;">
             <i class="fa-solid fa-microphone"></i>
         </button>
@@ -280,6 +283,9 @@
             <div class="ai-modal-footer">
                 <button id="ai-mic-trigger" class="ai-mic-btn" onclick="startVoiceInquiry()">
                     <i class="fa-solid fa-microphone"></i>
+                </button>
+                <button class="close-chat-btn" onclick="toggleAIAssistant()">
+                    <i class="fa-solid fa-circle-xmark"></i> إغلاق المحادثة
                 </button>
             </div>
         </div>

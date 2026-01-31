@@ -2178,10 +2178,18 @@ function toggleAIAssistant() {
 }
 
 function updateAIAssistantVisibility() {
-    const btn = document.getElementById('ai-btn');
+    const navBtn = document.getElementById('ai-nav-btn');
+    const oldFab = document.getElementById('ai-btn'); // Legacy support
     const modal = document.getElementById('ai-modal');
-    if (btn) btn.style.display = (isAuthenticated && userRole === 'student') ? 'flex' : 'none';
-    if (modal && (!isAuthenticated || userRole !== 'student')) modal.style.display = 'none';
+
+    const isStudent = (isAuthenticated && userRole === 'student');
+
+    if (navBtn) navBtn.style.display = isStudent ? 'flex' : 'none';
+    if (oldFab) oldFab.style.display = 'none'; // Ensure old FAB stays hidden
+
+    if (modal && (!isAuthenticated || userRole !== 'student')) {
+        modal.style.display = 'none';
+    }
 }
 
 let recognition;
