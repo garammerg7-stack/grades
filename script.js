@@ -953,6 +953,8 @@ function showDashboard() {
     if (currentView === 'grades') renderTable(courseSelect.value);
     else renderAttendanceTable(courseSelect.value);
 
+    // AI Assistant Visibility check
+    if (typeof updateAIAssistantVisibility === 'function') updateAIAssistantVisibility();
     updateAIAssistantVisibility();
 }
 
@@ -979,6 +981,7 @@ async function handleLogout() {
     tableBody.innerHTML = '';
     attendanceBody.innerHTML = '';
 
+    if (typeof updateAIAssistantVisibility === 'function') updateAIAssistantVisibility();
     updateAIAssistantVisibility();
 }
 
