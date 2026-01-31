@@ -2257,6 +2257,37 @@ function debugAI() {
     alert(`AI Debug:\nKey Loaded: ${!!ASSISTANT_CONFIG.apiKey}\nRole: ${userRole}\nVersion: 1.1`);
 }
 
+async function testAIConnection() {
+    const key = document.getElementById('ai-api-key').value.trim();
+    if (!key) {
+        alert("يرجى إدخال مفتاح الـ API أولاً.");
+        return;
+    }
+
+    console.log("Testing AI Connection...");
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Hello, this is a test connection." }] }]
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            alert("✅ تم الاتصال بنجاح! الذكاء الاصطناعي يعمل بشكل صحيح.");
+            console.log("Test Success:", data);
+        } else {
+            console.error("Test Failed:", data);
+            alert(`❌ فشل الاتصال.\nالسبب: ${data.error?.message || "غير معروف"}\nالكود: ${data.error?.status || response.status}`);
+        }
+    } catch (e) {
+        console.error("Test Exception:", e);
+        alert(`❌ خطأ تقني: ${e.message}`);
+    }
+}
+
 async function processAIQuery(query) {
     if (!ASSISTANT_CONFIG.apiKey) {
         console.error("AI Error: API Key is missing in ASSISTANT_CONFIG");
@@ -2265,6 +2296,12 @@ async function processAIQuery(query) {
     }
 
     updateAIStatus('جاري التفكير...', false);
+
+    if (!currentStudentName) {
+        console.error("AI Error: currentStudentName is empty");
+        addAIMessage('خطأ: لم يتم التعرف على اسم الطالب. يرجى تسجيل الخروج والدخول مرة أخرى.', 'assistant');
+        return;
+    }
 
     try {
         // Collect Student Context with defensive checks
@@ -2346,6 +2383,10 @@ async function processAIQuery(query) {
         let userMessage = `عذراً، حدث خطأ: ${e.message}`;
         if (e.message.includes('API key not valid')) userMessage = "خطأ: مفتاح الـ API غير صالح. يرجى التأكد من نسخه بشكل صحيح من Google AI Studio.";
         if (e.message.includes('User location is not supported')) userMessage = "خطأ: خدمة Gemini غير متاحة في موقعك الجغرافي حالياً بدون Proxy.";
+        if (e.message.includes('Failed to fetch')) userMessage = "خطأ في الشبكة: تعذر الوصول إلى سيرفرات جوجل. تأكد من اتصالك بالإنترنت.";
+
+        // Append technical hint for the developer
+        console.warn("AI Troubleshooting: Check if API Key matches and Firestore rules allow reading 'settings/assistant_config'");
 
         addAIMessage(userMessage, 'assistant');
     } finally {
